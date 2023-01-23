@@ -1,0 +1,12 @@
+Swat4X.ini
+Swat4XDedicatedServer.ini
+User.ini
+Running.ini
+SwatGuiState.ini
+Inc/
+Packages.*
+*.u
+*.h
+*.log
+*.7z
+*.doc
