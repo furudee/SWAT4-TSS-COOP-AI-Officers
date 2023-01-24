@@ -73,9 +73,16 @@ event PreBeginPlay()
 	InitLoadOut(OfficerLoadOutType);
 }
 
-event PostBeginPlay()
+simulated event PostBeginPlay()
 {
     Super.PostBeginPlay();
+	
+	if(Level.NetMode == NM_Client)
+	{
+		AddToSquads();
+		InitLoadOut(OfficerLoadOutType);
+	}
+
     // Notify the hive that our swat officer has been fully-constructed
     SwatAIRepository(Level.AIRepo).GetHive().NotifyOfficerConstructed(self);
     
@@ -86,7 +93,7 @@ event PostBeginPlay()
     NotifyStoppedMovingTimer.TimerDelegate = NotifyStoppedMovingTimerCallback;
 }
 
-event Destroyed()
+simulated event Destroyed()
 {
 	warn("Officer " $ Name $" was destroyed!");
 
@@ -253,7 +260,7 @@ function bool IsAttackingPlayer()
 //
 // Damage / Death
 
-function NotifyHit(float Damage, Pawn HitInstigator)
+simulated function NotifyHit(float Damage, Pawn HitInstigator)
 {
 	local SwatPlayer PlayerInstigator;
     local bool       IsHitByPlayer;
@@ -263,7 +270,7 @@ function NotifyHit(float Damage, Pawn HitInstigator)
 
 	// the following doesn't need to be networked because we have no Officers in Coop
     if ( IsHitByPlayer )
-	    PlayerInstigator = SwatPlayer(Level.GetLocalPlayerController().Pawn);
+	    PlayerInstigator = SwatPlayer(HitInstigator);
     
 	if ((PlayerInstigator != None) && !IsIncapacitated())
 	{
@@ -276,7 +283,7 @@ function NotifyHit(float Damage, Pawn HitInstigator)
 }
 
 // overridden from SwatAI
-function NotifyBecameIncapacitated(Pawn Incapacitator)
+simulated function NotifyBecameIncapacitated(Pawn Incapacitator)
 {
     local FiredWeapon CurrentWeapon;
 
@@ -462,7 +469,7 @@ simulated function        HandleReload();
 
 ///////////////////////////////////////////////////////////////////////////////
 
-function PlayTurnAwayAnimation()
+simulated function PlayTurnAwayAnimation()
 {
 	local name TurnAwayAnimation;
 
@@ -477,7 +484,7 @@ function PlayTurnAwayAnimation()
 //
 // Loadout
 
-private function InitLoadOut( String LoadOutName )
+simulated function InitLoadOut( String LoadOutName )
 {
     local DynamicLoadOutSpec LoadOutSpec;
     local CustomScenario CustomScen;
@@ -530,7 +537,7 @@ private function InitLoadOut( String LoadOutName )
 // a. not all subclasses of the common base class will use this functionality.
 // b. the functionality will most likely diverge sometime down the road, possibly causing maintenance headaches
 // c. we don't have multiple inheritance
-private function ReceiveLoadOut()
+simulated function ReceiveLoadOut()
 {
 	assert(LoadOut != None);
 
@@ -649,7 +656,7 @@ protected function bool CanPawnUseLowReady()
 simulated function EAnimationSet GetStandingInjuredAnimSet()    { return kAnimationSetOfficerInjuredStanding; }
 simulated function EAnimationSet GetCrouchingInjuredAnimSet()   { return kAnimationSetOfficerInjuredCrouching; }
 
-function EUpperBodyAnimBehavior GetMovementUpperBodyAimBehavior()
+simulated function EUpperBodyAnimBehavior GetMovementUpperBodyAimBehavior()
 {
 	// by default we use low ready when moving
 	return kUBAB_LowReady;
@@ -659,18 +666,18 @@ function EUpperBodyAnimBehavior GetMovementUpperBodyAimBehavior()
 //
 // Equipment
 
-function ThrownWeapon GetThrownWeapon(EquipmentSlot Slot)
+simulated function ThrownWeapon GetThrownWeapon(EquipmentSlot Slot)
 {
 	return ThrownWeapon(GetItemAtSlot(Slot));
 }
 
-function HandheldEquipment GetItemAtSlot(EquipmentSlot Slot)
+simulated function HandheldEquipment GetItemAtSlot(EquipmentSlot Slot)
 {
 	return LoadOut.GetItemAtSlot(Slot);
 }
 
 // overridden from SwatAI
-protected function float GetLengthOfTimeToFireFullAuto() 
+simulated protected function float GetLengthOfTimeToFireFullAuto() 
 { 
 	return RandRange(MinTimeToFireFullAuto, MaxTimeToFireFullAuto);
 }
@@ -679,17 +686,17 @@ protected function float GetLengthOfTimeToFireFullAuto()
 //
 // ISwatOfficer implementation
 
-function FiredWeapon GetPrimaryWeapon()
+simulated function FiredWeapon GetPrimaryWeapon()
 {
     return LoadOut.GetPrimaryWeapon();
 }
 
-function FiredWeapon GetBackupWeapon()
+simulated function FiredWeapon GetBackupWeapon()
 {
     return LoadOut.GetBackupWeapon();
 }
 
-function bool HasUsableWeapon()
+simulated function bool HasUsableWeapon()
 {
 	return (((GetPrimaryWeapon() != None) && !GetPrimaryWeapon().IsEmpty()) || 
 		    ((GetBackupWeapon() != None) && !GetBackupWeapon().IsEmpty()));
@@ -754,7 +761,7 @@ latent function ReEquipFiredWeapon()
 }
 
 // will re-equip a fired weapon (primary or backup) if the active item is not the primary or backup weapon
-function InstantReEquipFiredWeapon()
+simulated function InstantReEquipFiredWeapon()
 {
 	local FiredWeapon PrimaryWeapon, BackupWeapon;
 
@@ -778,7 +785,7 @@ function InstantReEquipFiredWeapon()
 	}
 }
 
-function bool HasTaser()
+simulated function bool HasTaser()
 {
     local HandheldEquipment Equipment;
 
@@ -921,5 +928,8 @@ defaultproperties
     
 	bAlwaysUseWalkAimErrorWhenMoving=true
 	bAlwaysTestPathReachability=true
+	bAlwaysRelevant=true
+	bReplicateAnimations=true
+	bNoRepMesh=false
 }
 

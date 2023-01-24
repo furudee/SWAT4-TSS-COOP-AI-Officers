@@ -1634,7 +1634,9 @@ function PlayerLoggedIn(PlayerController NewPlayer)
 
 	// This call may need to be moved at some point so that the entry point for the spawned officers
 	// is the same as the player.  For now I will just leave it here.  [crombie]
-	if ( Level.NetMode == NM_Standalone )
+	
+	// spawning will be changed later
+	if ( Level.NetMode == NM_Standalone || ( Level.IsCOOPServer && Level.NetMode != NM_Client && GetNumSpawnedOfficers() == 0 ))
     {
         SpawnOfficers();
     }

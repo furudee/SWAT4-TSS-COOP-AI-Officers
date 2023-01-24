@@ -380,7 +380,7 @@ simulated function InitializeEffectsSystem()
 #endif
 
 
-private function CreateAIRepository()
+simulated private function CreateAIRepository()
 {
     local class<AIRepository> AIRepositoryClass;
 
@@ -390,7 +390,7 @@ private function CreateAIRepository()
     // if we are not a networked game (NM_Standalone), then spawn the AIRepository
     if (NetMode == NM_Standalone 
 #if IG_SWAT //dkaplan, also create an AIRepo for COOP
-        || Level.IsCOOPServer
+        || Level.IsCOOPServer || (Level.IsPlayingCOOP && Level.NetMode == NM_Client)
 #endif
        )
     {
