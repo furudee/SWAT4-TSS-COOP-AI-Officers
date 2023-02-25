@@ -92,12 +92,12 @@ var private bool                            Selected;                       //tr
 //  has not yet finished being spoken.  these variables are used to send the command to the officers
 //  once the speech has finished.
 var protected Command                         PendingCommand;
-var private vector                          PendingCommandOrigin;           //the location of the player's camera at the time that the command was given, ie. started
-var private SwatAICommon.OfficerTeamInfo    PendingCommandTeam;             //the officer team to which the command was directed
+var protected vector                          PendingCommandOrigin;           //the location of the player's camera at the time that the command was given, ie. started
+var protected SwatAICommon.OfficerTeamInfo    PendingCommandTeam;             //the officer team to which the command was directed
 var protected array<Focus>                    PendingCommandFoci;             //the CommandInterface's list of Foci (see PlayerFocusInterface.uc) at the time that the command was given
 var protected int                             PendingCommandFociLength;       //the length of Foci (see PlayerFocusInterface.uc) at the time that the command was given
-var private SwatAICharacter                 PendingCommandTargetCharacter;  //the AI character to which the PendingCommand refers
-var private bool							PendingCommandHold;				//whether the command executes right away or not
+var protected SwatAICharacter                 PendingCommandTargetCharacter;  //the AI character to which the PendingCommand refers
+var protected bool							PendingCommandHold;				//whether the command executes right away or not
 
 //in Training, the CommandInterface is used in a "mode" where the player is expected to give
 //  a specific command, possibly to a specific team, and/or at a specific Door.
@@ -287,7 +287,7 @@ simulated function PostBeginPlay()
         }
     }
 
-    if( Level.NetMode == NM_Standalone )
+    if( Level.NetMode == NM_Standalone || Level.IsPlayingCOOP || Level.IsCOOPServer )
     {
         //cache references to the officer teams
         Element = SwatAIRepository(Level.AIRepo).GetElementSquad();
@@ -1063,6 +1063,11 @@ simulated function GiveCommandMP()
     local Vector PendingCommandTargetLocation;
     local eVoiceType VoiceType;
     local string SourceID, TargetID;
+	local name CommandTeam;
+	local Pawn Player;
+	
+	CommandTeam = GetCurrentTeam();
+	Player = Level.GetLocalPlayerController().Pawn;
 
     PendingCommandTargetActor = GetPendingCommandTargetActor();
     //note that GetPendingCommandTargetActor() returns None if the PendingCommand
@@ -1086,28 +1091,45 @@ simulated function GiveCommandMP()
     if( PlayerController.CanIssueCommand() )
     {
         PlayerController.StartIssueCommandTimer();
-    
-        //RPC the command to remote clients (will skip the local player)
-        PlayerController.ServerGiveCommand(
-            PendingCommand.Index,
-            Command_MP(PendingCommand).IsTaunt,
-            PlayerPawn,
-            SourceID,
-            PendingCommandTargetActor,
-            TargetID,
-            PendingCommandTargetLocation, 
-            VoiceType );
+		
+		//Display the Command Arrow for self
+		if( Player != None && Command_MP(Commands[PendingCommand.Index]).ArrowLifetime > 0.0 )	
+			SwatPlayer(Player).ShowCommandArrow( Command_MP(Commands[PendingCommand.Index]).ArrowLifetime, Player, PendingCommandTargetActor, Player.Location, PendingCommandTargetLocation, ( Command_MP(Commands[PendingCommand.Index]).IsTaunt || Command_MP(Commands[PendingCommand.Index]).TargetIsSelf ) );
+	
+		log(self$"::GiveCommandMP [COMMAND INTERFACE] --PendingCommand:: "$PendingCommand$ " --PendingCommand.bStatic:: "$PendingCommand.bStatic$" ECommand.Command_Static==PendingCommand.Command::: "$ECommand.Command_Static == PendingCommand.Command);
 
-        //instant feedback on client who gives the command (the local player)
-        ReceiveCommandMP(
-            PendingCommand.Index,
-            PlayerPawn,
-            SourceID,
-            PlayerController.GetHumanReadableName(),
-            PendingCommandTargetActor,
-            TargetID,
-            PendingCommandTargetLocation,
-            VoiceType );
+		// static command = MP command (roger, trailers ect)
+		if(PendingCommand.Command != ECommand.Command_Static)
+		{
+			//RPC the command to remote clients (will skip the local player)
+			PlayerController.ServerGiveCommand(
+				PendingCommand.Index,
+				Command_MP(PendingCommand).IsTaunt,
+				PlayerPawn,
+				SourceID,
+				PendingCommandTargetActor,
+				TargetID,
+				PendingCommandTargetLocation, 
+				VoiceType,
+				CommandTeam );
+				
+			// Go to speaking state
+			StartCommand();
+		}
+		else
+		{
+			//instant feedback on client who gives the command (the local player)
+			ReceiveCommandMP(
+				PendingCommand.Index,
+				PlayerPawn,
+				SourceID,
+				PlayerController.GetHumanReadableName(),
+				PendingCommandTargetActor,
+				TargetID,
+				PendingCommandTargetLocation,
+				VoiceType,
+				CommandTeam	);
+		}
     }
 }
 
@@ -1119,7 +1141,8 @@ simulated function ReceiveCommandMP(
         Actor TargetActor,          //the actor that the command refers to
         string TargetID,            //unique ID of the target
         Vector TargetLocation,      //the location that the command refers to.
-        eVoiceType VoiceType)       //the voice to use when playing this command
+        eVoiceType VoiceType,		//the voice to use when playing this command
+		name CommandTeam )       	
 {
     local Actor SourceOfSound;
     local Name VoiceTag;
@@ -1169,11 +1192,30 @@ simulated function ReceiveCommandMP(
     if( SourceOfSound != None )
         SourceOfSound.TriggerEffectEvent(Commands[CommandIndex].EffectEvent,,,,,,,,VoiceTag);
 
-    //display the command given as a chat message
+    //display team-colored command message
+	Switch(CommandTeam)
+	{
+		case 'RedTeam':
+			PlayerController.ClientMessage(
+				"[c=cc0000][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
+				'CommandGiven');
+			break;
+        case 'BlueTeam':
+			PlayerController.ClientMessage(
+				"[c=3d85c6][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
+				'CommandGiven');
+			break;
+        default:
+			PlayerController.ClientMessage(
+				"[c=FFC800][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
+				'CommandGiven');
+	}
+	/*
     PlayerController.ClientMessage(
         "[c=FFC800][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
         'CommandGiven');
-
+	*/
+	
     //Display the Command Arrow
     if( Source != None && Command_MP(Commands[CommandIndex]).ArrowLifetime > 0.0 )
     {
@@ -1231,6 +1273,11 @@ state Speaking
 {
     function FlushPendingCommand()
     {
+		local Actor PendingCommandTargetActor;
+		local Vector PendingCommandTargetLocation;
+		local name CommandTeamName;
+		local Pawn Player;
+		
         if (SometimesSendInterruptedCommand)
         {
             //Compare PendingCommandTeam with CurrentCommandTeam to determine
@@ -1241,17 +1288,37 @@ state Speaking
             //  then the first command is sent to team A IF AND ONLY IF:
             //      A and B are different teams and B is not the Element.
 
-            if  (
-                    PendingCommandTeam != CurrentCommandTeam
-                &&  CurrentCommandTeam != Element
-                )
+            if  ( PendingCommandTeam != CurrentCommandTeam &&  CurrentCommandTeam != Element )
             {
                 log("[COMMAND INTERFACE] At Time "$Level.TimeSeconds
                     $", ...          the previous command was INTERRUPTED, and WILL be sent to the Officers. "
                     $"(SometimesSendInterruptedCommand=true, PendingCommandTeam="$PendingCommandTeam.class.name
                     $", CurrentCommandTeam="$CurrentCommandTeam.class.name$")");
 
-                SendCommandToOfficers();
+				if(Level.NetMode == NM_Standalone)
+				{
+					SendCommandToOfficers(PendingCommand.Index, Level.GetLocalPlayerController().Pawn, PendingCommandTargetActor, PendingCommandTargetLocation, GetTeamByInfo(CurrentCommandTeam), PendingCommandOrigin);
+				}
+				else
+				{
+					CommandTeamName = GetTeamByInfo(PendingCommandTeam);
+					Player = Level.GetLocalPlayerController().Pawn;
+					PendingCommandTargetActor = GetPendingCommandTargetActor();
+					//note that GetPendingCommandTargetActor() returns None if the PendingCommand
+					//  isn't associated with any particular actor.
+					if (PendingCommandTargetActor != None)
+						PendingCommandTargetLocation = PendingCommandTargetActor.Location;
+					else    //no target actor
+						PendingCommandTargetLocation = GetLastFocusLocation();  //the point where the command interface focus trace was blocked
+						
+					PlayerController.ServerOrderOfficers(
+						PendingCommand.Index,
+						PendingCommandTargetActor,
+						PendingCommandTargetLocation, 
+						CommandTeamName,
+						PendingCommandOrigin,
+						Player	);
+				}
             }
             else
                 log("[COMMAND INTERFACE] At Time "$Level.TimeSeconds
@@ -1339,6 +1406,21 @@ state SpeakingCommand extends Speaking
     // the command speech has either completed, or it has been interrupted.
     function OnEffectStopped(Actor inStoppedEffect, bool Completed)
     {
+		local Actor PendingCommandTargetActor;
+		local Vector PendingCommandTargetLocation;
+		local name CommandTeamName;
+		local Pawn Player;
+		
+		CommandTeamName = GetTeamByInfo(PendingCommandTeam);
+		Player = Level.GetLocalPlayerController().Pawn;
+		PendingCommandTargetActor = GetPendingCommandTargetActor();
+		//note that GetPendingCommandTargetActor() returns None if the PendingCommand
+		//  isn't associated with any particular actor.
+		if (PendingCommandTargetActor != None)
+			PendingCommandTargetLocation = PendingCommandTargetActor.Location;
+		else    //no target actor
+			PendingCommandTargetLocation = GetLastFocusLocation();  //the point where the command interface focus trace was blocked
+		
         if (SwatRepo(Level.GetRepo()).GuiConfig.SwatGameState != GAMESTATE_MidGame)
         {
             GotoState('');
@@ -1348,7 +1430,21 @@ state SpeakingCommand extends Speaking
         if (Completed)
         {
             log("[COMMAND INTERFACE] At Time "$Level.TimeSeconds$", "$PendingCommand.name$" completed.");
-            SendCommandToOfficers();
+			
+			if(Level.NetMode == NM_Standalone)
+			{
+				SendCommandToOfficers(PendingCommand.Index, Level.GetLocalPlayerController().Pawn, PendingCommandTargetActor, PendingCommandTargetLocation, GetTeamByInfo(CurrentCommandTeam), PendingCommandOrigin);
+			}
+			else
+			{
+				PlayerController.ServerOrderOfficers(
+					PendingCommand.Index,
+					PendingCommandTargetActor,
+					PendingCommandTargetLocation, 
+					CommandTeamName,
+					PendingCommandOrigin,
+					Player	);
+			}
         }
         //else, PendingCommand is probably a new command that was just started
 
@@ -1422,69 +1518,100 @@ simulated function bool IsExpectedCommandSource(name CommandSource)
 }
 
 //send the pending command to the officers, now that any necessary speech has completed
-simulated function SendCommandToOfficers()
+simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer, Actor PCTargetActor, Vector PCTargetLocation, name CommandTeam, Vector PCOrigin)
 {
     local Actor PendingCommandTargetActor;
+	local Vector PendingCommandTargetLocation;
+	local Vector PendingCommandOrigin2;
+	local name OriginalCommandTeam;
+	local Command OriginalCommand;
+	
     local name LastFocusSource;
 	local bool bCommandIssued;	// was a command actually issued?
 
-    PendingCommandTargetActor = GetPendingCommandTargetActor();
+    //PendingCommandTargetActor = GetPendingCommandTargetActor();
 
-    if (Level.GetLocalPlayerController().Pawn == None)
+	// set variables
+	PendingCommandTargetActor = PCTargetActor;
+	PendingCommandTargetLocation = PCTargetLocation;
+	if(PendingCommandOrigin == PCOrigin)
+		PendingCommandOrigin2 = PCOrigin;
+	else
+		PendingCommandOrigin2 = PendingCommandOrigin;
+		
+	// change original variables ( THE ONLY CHANGE TO CLASS VARIABLES ) //
+	OriginalCommand = PendingCommand;
+	OriginalCommandTeam = GetCurrentTeam();
+	
+	//if(OriginalCommandTeam != CommandTeam)
+	//{
+		SetCurrentTeam(CommandTeam);
+		PendingCommandTeam = CurrentCommandTeam;
+	//}
+	//if(OriginalCommand != Commands[CommandIndex])
+		PendingCommand = Commands[CommandIndex];
+	//////////////////////////////////////////////////////////////////////
+	
+    if (!Level.IsCOOPServer && Level.GetLocalPlayerController().Pawn == None)
     {
         log("[COMMAND INTERFACE] At Time "$Level.TimeSeconds
             $", ...          in SendCommandToOfficers(), Level.GetLocalPlayerController().Pawn is none");
         return;
     }
 
-    LastFocusSource = SwatGamePlayerController(Level.GetLocalPlayerController()).GetLastFocusSource();
+	if(Level.NetMode == NM_Standalone)
+	{
+		LastFocusSource = SwatGamePlayerController(Level.GetLocalPlayerController()).GetLastFocusSource();
 
-    //check the given command against any current expected command - for Training mission
-    if  (
-            (   //unexpected command
-                ExpectedCommand != ''
-            &&  PendingCommand.name != ExpectedCommand
-            )
-        ||  (   //unexpected command team
-                ExpectedCommandTeam != ''
-            &&  PendingCommandTeam.label != ExpectedCommandTeam
-            )
-        ||  (
-                //unexpected command target door
-                ExpectedCommandTargetDoor != ''
-            &&  (
-                    PendingCommandTargetActor == None
-                ||  !PendingCommandTargetActor.IsA('SwatDoor')
-                ||  PendingCommandTargetActor.label != ExpectedCommandTargetDoor
-                )
-            )
-        ||  (   //unexpected command source
-                ExpectedCommandSource != ''
-            && !IsExpectedCommandSource(LastFocusSource)
-            )
-        )
-    {
-        dispatchMessage(new class'MessageUnexpectedCommandGiven'(
-                    ExpectedCommand,
-                    ExpectedCommandTeam,
-                    ExpectedCommandTargetDoor,
-                    ExpectedCommandSource,
-                    PendingCommand.name,
-                    PendingCommandTeam.name,
-                    PendingCommandTargetActor.name,
-                    LastFocusSource));
+		//check the given command against any current expected command - for Training mission
+		if  (
+				(   //unexpected command
+					ExpectedCommand != ''
+				&&  PendingCommand.name != ExpectedCommand
+				)
+			||  (   //unexpected command team
+					ExpectedCommandTeam != ''
+				&&  PendingCommandTeam.label != ExpectedCommandTeam
+				)
+			||  (
+					//unexpected command target door
+					ExpectedCommandTargetDoor != ''
+				&&  (
+						PendingCommandTargetActor == None
+					||  !PendingCommandTargetActor.IsA('SwatDoor')
+					||  PendingCommandTargetActor.label != ExpectedCommandTargetDoor
+					)
+				)
+			||  (   //unexpected command source
+					ExpectedCommandSource != ''
+				&& !IsExpectedCommandSource(LastFocusSource)
+				)
+			)
+		{
+			dispatchMessage(new class'MessageUnexpectedCommandGiven'(
+						ExpectedCommand,
+						ExpectedCommandTeam,
+						ExpectedCommandTargetDoor,
+						ExpectedCommandSource,
+						PendingCommand.name,
+						PendingCommandTeam.name,
+						PendingCommandTargetActor.name,
+						LastFocusSource));
 
-        log("[COMMAND INTERFACE] At Time "$Level.TimeSeconds
-            $", ...          sent MessageUnexpectedCommandGiven:"
-            $"  ExpectedCommand="$ExpectedCommand$", PendingCommand.name="$PendingCommand.name$"."
-            $"  ExpectedCommandTeam="$ExpectedCommandTeam$", PendingCommandTeam.name="$PendingCommandTeam.name$"."
-            $"  PendingCommandTargetActor.class="$PendingCommandTargetActor.class.name
-            $", PendingCommandTargetActor.name="$PendingCommandTargetActor.name$"."
-            $". Focus: "$GetPendingFocusString());
+			log("[COMMAND INTERFACE] At Time "$Level.TimeSeconds
+				$", ...          sent MessageUnexpectedCommandGiven:"
+				$"  ExpectedCommand="$ExpectedCommand$", PendingCommand.name="$PendingCommand.name$"."
+				$"  ExpectedCommandTeam="$ExpectedCommandTeam$", PendingCommandTeam.name="$PendingCommandTeam.name$"."
+				$"  PendingCommandTargetActor.class="$PendingCommandTargetActor.class.name
+				$", PendingCommandTargetActor.name="$PendingCommandTargetActor.name$"."
+				$". Focus: "$GetPendingFocusString());
 
-        return;
+			return;
+		}
     }
-    
+	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --PendingCommandTargetActor:: "$PendingCommandTargetActor$" --PendingCommandTargetLocation:: "$PendingCommandTargetLocation$" --PendingCommandOrigin2::"$PendingCommandOrigin2);
+	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --OriginalCommand:: "$OriginalCommand$" --PendingCommand:: "$PendingCommand$" --OriginalCommandTeam::"$OriginalCommandTeam$" --CurrentCommandTeam::"$CurrentCommandTeam);
+	
     //
     // "THE BIG ASS SWITCH"
     //
@@ -1516,97 +1643,97 @@ simulated function SendCommandToOfficers()
 			ClearHeldCommand(PendingCommandTeam);
 			ClearHeldCommandCaptions(PendingCommandTeam);
 			bCommandIssued = PendingCommandTeam.Zulu(
-				Level.GetLocalPlayerController().Pawn,
-                PendingCommandOrigin);
+				CommandingPlayer,
+                PendingCommandOrigin2);
 			break;
 
         case Command_FallIn:
             bCommandIssued = PendingCommandTeam.FallIn(
-                Level.GetLocalPlayerController().Pawn,
-                PendingCommandOrigin);
+                CommandingPlayer,
+                PendingCommandOrigin2);
             break;
 
         case Command_MoveTo:
             bCommandIssued = PendingCommandTeam.MoveTo(
-                Level.GetLocalPlayerController().Pawn,
-                PendingCommandOrigin,
-                GetLastFocusLocation());
+                CommandingPlayer,
+                PendingCommandOrigin2,
+                PendingCommandTargetLocation);
             break;
 
         case Command_Cover:
             bCommandIssued = PendingCommandTeam.Cover(
-                Level.GetLocalPlayerController().Pawn, 
-                PendingCommandOrigin,
-                GetLastFocusLocation());
+                CommandingPlayer, 
+                PendingCommandOrigin2,
+                PendingCommandTargetLocation);
             break;
 
         case Command_Deploy_Flashbang:
             bCommandIssued = PendingCommandTeam.DeployThrownItemAt(
-                Level.GetLocalPlayerController().Pawn, 
-                PendingCommandOrigin,
+                CommandingPlayer, 
+                PendingCommandOrigin2,
                 Slot_Flashbang,
-                GetLastFocusLocation(),
+                PendingCommandTargetLocation,
                 SwatDoor(PendingCommandTargetActor));
             Back();
             break;
 
         case Command_Deploy_CSGas:
             bCommandIssued = PendingCommandTeam.DeployThrownItemAt(
-                Level.GetLocalPlayerController().Pawn, 
-                PendingCommandOrigin,
+                CommandingPlayer, 
+                PendingCommandOrigin2,
                 Slot_CSGasGrenade,
-                GetLastFocusLocation(),
+                PendingCommandTargetLocation,
                 SwatDoor(PendingCommandTargetActor));
             Back();
             break;
 
         case Command_Deploy_StingGrenade:
             bCommandIssued = PendingCommandTeam.DeployThrownItemAt(
-                Level.GetLocalPlayerController().Pawn, 
-                PendingCommandOrigin,
+                CommandingPlayer, 
+                PendingCommandOrigin2,
                 Slot_StingGrenade,
-                GetLastFocusLocation(),
+                PendingCommandTargetLocation,
                 SwatDoor(PendingCommandTargetActor));
             Back();
             break;
 
        case Command_Deploy_GrenadeLauncher:
             bCommandIssued = PendingCommandTeam.DeployGrenadeLauncher(
-				Level.GetLocalPlayerController().Pawn, 
-				PendingCommandOrigin,
+				CommandingPlayer, 
+				PendingCommandOrigin2,
 				PendingCommandTargetActor,
-				GetLastFocusLocation());
+				PendingCommandTargetLocation);
             Back();
             break;
 
         case Command_Disable:
             if (PendingCommandTargetActor != None)
                 bCommandIssued = PendingCommandTeam.DisableTarget(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                         PendingCommandTargetActor);
             break;
 
         case Command_RemoveWedge:
             bCommandIssued = PendingCommandTeam.RemoveWedge(
-                Level.GetLocalPlayerController().Pawn, 
-                PendingCommandOrigin,
+                CommandingPlayer, 
+                PendingCommandOrigin2,
                 SwatDoor(PendingCommandTargetActor));
             break;
 
         case Command_SecureEvidence:
             if (PendingCommandTargetActor != None)
 				bCommandIssued = PendingCommandTeam.SecureEvidence(
-					Level.GetLocalPlayerController().Pawn, 
-					PendingCommandOrigin,
+					CommandingPlayer, 
+					PendingCommandOrigin2,
                     PendingCommandTargetActor);
             break;
 
         case Command_MirrorCorner:
             if (PendingCommandTargetActor != None)
                 bCommandIssued = PendingCommandTeam.MirrorCorner(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                         PendingCommandTargetActor);
             break;
 
@@ -1615,24 +1742,24 @@ simulated function SendCommandToOfficers()
         case Command_StackUpAndTryDoor:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.StackUpAndTryDoorAt(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
         case Command_PickLock:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.PickLock(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
         case Command_MoveAndClear:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.MoveAndClear(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1644,8 +1771,8 @@ simulated function SendCommandToOfficers()
         case Command_OpenAndMakeEntry:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BreachAndClear(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1654,8 +1781,8 @@ simulated function SendCommandToOfficers()
         case Command_BangAndClear:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BangAndClear(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1665,8 +1792,8 @@ simulated function SendCommandToOfficers()
         case Command_OpenBangAndMakeEntry:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BreachBangAndClear(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1675,8 +1802,8 @@ simulated function SendCommandToOfficers()
         case Command_GasAndClear:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.GasAndClear(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1686,8 +1813,8 @@ simulated function SendCommandToOfficers()
         case Command_OpenGasAndMakeEntry:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BreachGasAndClear(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1696,8 +1823,8 @@ simulated function SendCommandToOfficers()
         case Command_StingAndClear:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.StingAndClear(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1707,16 +1834,16 @@ simulated function SendCommandToOfficers()
         case Command_OpenStingAndMakeEntry:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BreachStingAndClear(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
         case Command_Deploy_C2Charge:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.DeployC2(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             Back();
             break;
@@ -1724,8 +1851,8 @@ simulated function SendCommandToOfficers()
         case Command_Deploy_BreachingShotgun:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.DeployShotgun(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             Back();
             break;
@@ -1733,8 +1860,8 @@ simulated function SendCommandToOfficers()
         case Command_Deploy_Wedge:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.DeployWedge(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             Back();
             break;
@@ -1742,24 +1869,24 @@ simulated function SendCommandToOfficers()
         case Command_CloseDoor:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.CloseDoor(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
         case Command_MirrorRoom:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.MirrorRoom(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
         case Command_MirrorUnderDoor:
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.MirrorUnderDoor(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1768,8 +1895,8 @@ simulated function SendCommandToOfficers()
         case Command_Restrain:
             if (CheckForValidRestrainable(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.Restrain(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     Pawn(PendingCommandTargetActor));
             break;
 
@@ -1777,8 +1904,8 @@ simulated function SendCommandToOfficers()
             if (CheckForValidPawn(PendingCommand, PendingCommandTargetActor))
             {
                 bCommandIssued = PendingCommandTeam.DeployPepperSpray(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     Pawn(PendingCommandTargetActor));
                 Back();
             }
@@ -1788,8 +1915,8 @@ simulated function SendCommandToOfficers()
             if (CheckForValidPawn(PendingCommand, PendingCommandTargetActor))
             {
                 bCommandIssued = PendingCommandTeam.DeployTaser(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     Pawn(PendingCommandTargetActor));
                 Back();
             }
@@ -1799,8 +1926,8 @@ simulated function SendCommandToOfficers()
             if (CheckForValidPawn(PendingCommand, PendingCommandTargetActor))
             {
                 bCommandIssued = PendingCommandTeam.DeployLessLethalShotgun(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     Pawn(PendingCommandTargetActor));
                 Back();
             }
@@ -1810,8 +1937,8 @@ simulated function SendCommandToOfficers()
             if (CheckForValidPawn(PendingCommand, PendingCommandTargetActor))
             {
                 bCommandIssued = PendingCommandTeam.DeployPepperBallGun(
-                    Level.GetLocalPlayerController().Pawn, 
-                    PendingCommandOrigin,
+                    CommandingPlayer, 
+                    PendingCommandOrigin2,
                     Pawn(PendingCommandTargetActor));
                 Back();
             }
@@ -1819,9 +1946,9 @@ simulated function SendCommandToOfficers()
 
         case Command_Deploy_Lightstick:
             bCommandIssued = PendingCommandTeam.DeployLightstick(
-                Level.GetLocalPlayerController().Pawn,
-                PendingCommandOrigin,
-                GetLastFocusLocation());
+                CommandingPlayer,
+                PendingCommandOrigin2,
+                PendingCommandTargetLocation);
             break;
 
         default:
@@ -1851,6 +1978,15 @@ simulated function SendCommandToOfficers()
     else
         dispatchMessage(new class'MessageCommandGiven'(PendingCommand.name, PendingCommandTeam.label, ''));
 
+	// set back variables if changed
+	//if(OriginalCommandTeam != GetCurrentTeam())
+	//{
+		SetCurrentTeam(OriginalCommandTeam);
+		PendingCommandTeam = CurrentCommandTeam;
+	//}
+	//if(OriginalCommand != PendingCommand)
+		PendingCommand = OriginalCommand;
+		
     return;
 }
 
@@ -2189,6 +2325,36 @@ simulated function UpdateDefaultCommandControl(string Text)
 
 	if ( Level.TimeSeconds > CurrentSpeechCommandTime )
 		CurrentSpeechCommand = "";
+}
+
+simulated function SwatAICommon.OfficerTeamInfo GetTeamByName(name teamName)
+{
+    switch (teamName)
+    {
+        case 'RedTeam':
+            return RedTeam;
+        case 'BlueTeam':
+            return BlueTeam;
+        case 'Element':
+            return Element;
+        default:
+            assert(false);
+    }
+}
+
+simulated function name GetTeamByInfo(SwatAICommon.OfficerTeamInfo teamName)
+{
+    switch (teamName)
+    {
+        case RedTeam:
+            return 'RedTeam';
+        case BlueTeam:
+            return 'BlueTeam';
+        case Element:
+            return 'Element';
+        default:
+            assert(false);
+    }
 }
 
 cpptext

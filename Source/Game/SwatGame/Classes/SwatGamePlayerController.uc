@@ -309,6 +309,9 @@ replication
         ServerRequestViewportChange, ServerSetAlwaysRun, ServerActivateOfficerViewport,
         ServerGiveCommand, ServerIssueCompliance, ServerOnEffectStopped, ServerSetVoiceType,
 		ServerRetryStatsAuth;
+		
+	reliable if(Role < ROLE_Authority)
+		ServerOrderOfficers;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4772,6 +4775,24 @@ function bool HandsShouldIdle()
 // Command Interface
 //
 
+
+exec function CommandInterfaceNextTeamCOOP()
+{
+    local CommandInterface CCI, GCI;
+
+    //need to notify both because DefaultCommand style is managed by the GCI
+    CCI = CommandInterface(GetFocusInterface(Focus_ClassicCommand));
+    GCI = CommandInterface(GetFocusInterface(Focus_GraphicCommand));
+	if (Level.NetMode != NM_Standalone && Level.IsPlayingCOOP)
+	{
+		if (CCI != None)
+			CCI.NextTeam();
+		if (GCI != None)
+			GCI.NextTeam();
+	}
+}
+
+
 //in SP, this changes the currently selected team
 //in MP, this changes the currently selected main menu
 exec function CommandInterfaceNextGroup()
@@ -4877,6 +4898,28 @@ exec function CommandOrEquip(NumberRow Row, int Number)
         EquipSlot(Number);
 }
 
+function ServerOrderOfficers(        
+		int CommandIndex,           //index into Commands array of the command that is being given
+        Actor PCTargetActor,          //the actor that the command refers to
+        Vector PCTargetLocation,      //the location that the command refers to.
+                                    //  Note: will not be PendingCommandTargetActor.Location, because the focus trace will be blocked before that location
+		name CommandTeam,
+		vector PCOrigin,
+		Pawn CommandingPlayer	)
+{
+	if(Role == ROLE_Authority)
+	{
+		// create interface for dedicated host
+		if(GetCommandInterface() == None)
+			CurrentCommandInterface = Spawn(class'GraphicCommandInterface_MP');
+		
+		log(self$"::ServerOrderOfficers [PLAYER CONTROLLER] --PCTargetActor:: "$PCTargetActor$" --PCTargetLocation:: "$PCTargetLocation$" --CommandingPlayer:: "$CommandingPlayer);
+
+		// send the command using hosts commandinterface
+		GetCommandInterface().SendCommandToOfficers(CommandIndex, CommandingPlayer, PCTargetActor, PCTargetLocation, CommandTeam, PCOrigin);
+	}
+}
+
 function ServerGiveCommand(
         int CommandIndex,           //index into Commands array of the command that is being given
         bool IsTaunt,               //is this command a taunt.  This will be used to determine which players receive the command, and on whom effects should be played.
@@ -4886,12 +4929,13 @@ function ServerGiveCommand(
         string TargetID,            //unique ID of the target
         Vector TargetLocation,      //the location that the command refers to.
                                     //  Note: will not be PendingCommandTargetActor.Location, because the focus trace will be blocked before that location
-        eVoiceType VoiceType)
+        eVoiceType VoiceType,
+		name CommandTeam )
 {
     local SwatGamePlayerController PC;
     local Controller Controller;
     local String SourceActorName;
-
+	
     if (Level.GetEngine().EnableDevTools)
     {
         mplog("SwatGamePlayerController::ServerGiveCommand() Sending to clients CommandIndex="$CommandIndex
@@ -4942,7 +4986,8 @@ function ServerGiveCommand(
                     TargetActor, 
                     TargetID,
                     TargetLocation,
-                    VoiceType );
+                    VoiceType,
+					CommandTeam );
         }
     }
 }
@@ -4955,7 +5000,8 @@ simulated function ClientReceiveCommand(
         Actor TargetActor, 
         string TargetID,
         Vector TargetLocation,
-        eVoiceType VoiceType )
+        eVoiceType VoiceType,
+		name CommandTeam )
 {
     GetCommandInterface().ReceiveCommandMP(
             CommandIndex, 
@@ -4965,7 +5011,8 @@ simulated function ClientReceiveCommand(
             TargetActor, 
             TargetID,
             TargetLocation,
-            VoiceType);
+            VoiceType,
+			CommandTeam );
 }
 
 //when a Officer dies, we want to check if any team has no officers.
