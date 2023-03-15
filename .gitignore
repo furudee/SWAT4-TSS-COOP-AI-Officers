@@ -3,6 +3,8 @@ Swat4XDedicatedServer.ini
 User.ini
 Running.ini
 DynamicLoadout.ini
+Campaign.ini
+SwatGUIState.ini
 Inc/
 Packages.*
 *.u

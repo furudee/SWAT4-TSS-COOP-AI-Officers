@@ -164,7 +164,7 @@ function StartCommand()
 		
 	if(Level.NetMode == NM_Standalone)
 	{
-		SendCommandToOfficers(PendingCommand.Index, Level.GetLocalPlayerController().Pawn, PendingCommandTargetActor, PendingCommandTargetLocation, CommandTeamName, PendingCommandOrigin);
+		SendCommandToOfficers(PendingCommand.Index, Level.GetLocalPlayerController().Pawn, PendingCommandTargetActor, PendingCommandTargetLocation, CommandTeamName, PendingCommandOrigin, PendingCommandHold);
 	}
 	else
 	{
@@ -174,7 +174,8 @@ function StartCommand()
 			PendingCommandTargetLocation, 
 			CommandTeamName,
 			PendingCommandOrigin,
-			Player	);
+			Player,
+			PendingCommandHold );
 	}
 }
 

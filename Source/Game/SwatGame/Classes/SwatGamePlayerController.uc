@@ -4905,7 +4905,8 @@ function ServerOrderOfficers(
                                     //  Note: will not be PendingCommandTargetActor.Location, because the focus trace will be blocked before that location
 		name CommandTeam,
 		vector PCOrigin,
-		Pawn CommandingPlayer	)
+		Pawn CommandingPlayer,
+		bool bHoldCommand )
 {
 	if(Role == ROLE_Authority)
 	{
@@ -4913,10 +4914,10 @@ function ServerOrderOfficers(
 		if(GetCommandInterface() == None)
 			CurrentCommandInterface = Spawn(class'GraphicCommandInterface_MP');
 		
-		log(self$"::ServerOrderOfficers [PLAYER CONTROLLER] --PCTargetActor:: "$PCTargetActor$" --PCTargetLocation:: "$PCTargetLocation$" --CommandingPlayer:: "$CommandingPlayer);
+		log(self$"::ServerOrderOfficers [PLAYER CONTROLLER] --PCTargetActor:: "$PCTargetActor$" --PCTargetLocation:: "$PCTargetLocation$" --CommandingPlayer:: "$CommandingPlayer$" --bHoldCommand:: "$bHoldCommand);
 
 		// send the command using hosts commandinterface
-		GetCommandInterface().SendCommandToOfficers(CommandIndex, CommandingPlayer, PCTargetActor, PCTargetLocation, CommandTeam, PCOrigin);
+		GetCommandInterface().SendCommandToOfficers(CommandIndex, CommandingPlayer, PCTargetActor, PCTargetLocation, CommandTeam, PCOrigin, bHoldCommand);
 	}
 }
 
@@ -5222,9 +5223,11 @@ exec function HoldCommand(bool bPressed)
 	local OfficerTeamInfo Team;
     local GraphicCommandInterface GCI;
 
-	if (Level.NetMode != NM_Standalone)
+	if (Level.NetMode != NM_Standalone 
+		// && !Level.IsPlayingCOOP
+		)
 		return;
-
+		
 	Team = GetCommandInterface().CurrentCommandTeam;
     GCI = GraphicCommandInterface(GetCommandInterface());
 

@@ -785,6 +785,7 @@ simulated final event string ColorizeExpectedCommand(Command Command)
 function SetHeldCommand(Command Command, OfficerTeamInfo Team)
 {
 	local SwatAIRepository SwatAIRepo;
+	log(self$" SetHeldCommand");
 
 	SwatAIRepo = SwatAIRepository(Level.AIRepo);
 
@@ -809,7 +810,7 @@ function SetHeldCommand(Command Command, OfficerTeamInfo Team)
 function SetHeldCommandCaptions(Command Command, OfficerTeamInfo Team)
 {
 	local SwatAIRepository SwatAIRepo;
-
+	log(self$" SetHeldCommandCaptions");
 	SwatAIRepo = SwatAIRepository(Level.AIRepo);
 
 	if (Team == SwatAIRepo.GetElementSquad())
@@ -1098,25 +1099,19 @@ simulated function GiveCommandMP()
 	
 		log(self$"::GiveCommandMP [COMMAND INTERFACE] --PendingCommand:: "$PendingCommand$ " --PendingCommand.bStatic:: "$PendingCommand.bStatic$" ECommand.Command_Static==PendingCommand.Command::: "$ECommand.Command_Static == PendingCommand.Command);
 
+		PlayerController.ServerGiveCommand(
+			PendingCommand.Index,
+			Command_MP(PendingCommand).IsTaunt,
+			PlayerPawn,
+			SourceID,
+			PendingCommandTargetActor,
+			TargetID,
+			PendingCommandTargetLocation, 
+			VoiceType,
+			CommandTeam );
+
 		// static command = MP command (roger, trailers ect)
-		if(PendingCommand.Command != ECommand.Command_Static)
-		{
-			//RPC the command to remote clients (will skip the local player)
-			PlayerController.ServerGiveCommand(
-				PendingCommand.Index,
-				Command_MP(PendingCommand).IsTaunt,
-				PlayerPawn,
-				SourceID,
-				PendingCommandTargetActor,
-				TargetID,
-				PendingCommandTargetLocation, 
-				VoiceType,
-				CommandTeam );
-				
-			// Go to speaking state
-			StartCommand();
-		}
-		else
+		if(PendingCommand.Command == Command_Static)
 		{
 			//instant feedback on client who gives the command (the local player)
 			ReceiveCommandMP(
@@ -1130,6 +1125,8 @@ simulated function GiveCommandMP()
 				VoiceType,
 				CommandTeam	);
 		}
+		else
+			GiveCommandSP();
     }
 }
 
@@ -1297,7 +1294,7 @@ state Speaking
 
 				if(Level.NetMode == NM_Standalone)
 				{
-					SendCommandToOfficers(PendingCommand.Index, Level.GetLocalPlayerController().Pawn, PendingCommandTargetActor, PendingCommandTargetLocation, GetTeamByInfo(CurrentCommandTeam), PendingCommandOrigin);
+					SendCommandToOfficers(PendingCommand.Index, Level.GetLocalPlayerController().Pawn, PendingCommandTargetActor, PendingCommandTargetLocation, GetTeamByInfo(CurrentCommandTeam), PendingCommandOrigin, PendingCommandHold);
 				}
 				else
 				{
@@ -1317,7 +1314,8 @@ state Speaking
 						PendingCommandTargetLocation, 
 						CommandTeamName,
 						PendingCommandOrigin,
-						Player	);
+						Player,
+						PendingCommandHold );
 				}
             }
             else
@@ -1433,7 +1431,7 @@ state SpeakingCommand extends Speaking
 			
 			if(Level.NetMode == NM_Standalone)
 			{
-				SendCommandToOfficers(PendingCommand.Index, Level.GetLocalPlayerController().Pawn, PendingCommandTargetActor, PendingCommandTargetLocation, GetTeamByInfo(CurrentCommandTeam), PendingCommandOrigin);
+				SendCommandToOfficers(PendingCommand.Index, Level.GetLocalPlayerController().Pawn, PendingCommandTargetActor, PendingCommandTargetLocation, GetTeamByInfo(CurrentCommandTeam), PendingCommandOrigin, PendingCommandHold);
 			}
 			else
 			{
@@ -1443,7 +1441,8 @@ state SpeakingCommand extends Speaking
 					PendingCommandTargetLocation, 
 					CommandTeamName,
 					PendingCommandOrigin,
-					Player	);
+					Player,
+					PendingCommandHold );
 			}
         }
         //else, PendingCommand is probably a new command that was just started
@@ -1518,7 +1517,7 @@ simulated function bool IsExpectedCommandSource(name CommandSource)
 }
 
 //send the pending command to the officers, now that any necessary speech has completed
-simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer, Actor PCTargetActor, Vector PCTargetLocation, name CommandTeam, Vector PCOrigin)
+simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer, Actor PCTargetActor, Vector PCTargetLocation, name CommandTeam, Vector PCOrigin, bool bHoldCommand)
 {
     local Actor PendingCommandTargetActor;
 	local Vector PendingCommandTargetLocation;
@@ -1542,14 +1541,10 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
 	// change original variables ( THE ONLY CHANGE TO CLASS VARIABLES ) //
 	OriginalCommand = PendingCommand;
 	OriginalCommandTeam = GetCurrentTeam();
-	
-	//if(OriginalCommandTeam != CommandTeam)
-	//{
-		SetCurrentTeam(CommandTeam);
-		PendingCommandTeam = CurrentCommandTeam;
-	//}
-	//if(OriginalCommand != Commands[CommandIndex])
-		PendingCommand = Commands[CommandIndex];
+
+	SetCurrentTeam(CommandTeam);
+	PendingCommandTeam = CurrentCommandTeam;
+	PendingCommand = Commands[CommandIndex];
 	//////////////////////////////////////////////////////////////////////
 	
     if (!Level.IsCOOPServer && Level.GetLocalPlayerController().Pawn == None)
@@ -1611,7 +1606,8 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
     }
 	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --PendingCommandTargetActor:: "$PendingCommandTargetActor$" --PendingCommandTargetLocation:: "$PendingCommandTargetLocation$" --PendingCommandOrigin2::"$PendingCommandOrigin2);
 	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --OriginalCommand:: "$OriginalCommand$" --PendingCommand:: "$PendingCommand$" --OriginalCommandTeam::"$OriginalCommandTeam$" --CurrentCommandTeam::"$CurrentCommandTeam);
-	
+	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --bHoldCommand:: "$bHoldCommand);
+
     //
     // "THE BIG ASS SWITCH"
     //
@@ -1960,7 +1956,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
 	if (bCommandIssued)
 	{
 		// pass "hold" flag on to posted goal
-		PendingCommandTeam.SetSquadCommandGoalHold(PendingCommandHold);
+		PendingCommandTeam.SetSquadCommandGoalHold(bHoldCommand);
 	}
 	else
 	{
@@ -1978,14 +1974,10 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
     else
         dispatchMessage(new class'MessageCommandGiven'(PendingCommand.name, PendingCommandTeam.label, ''));
 
-	// set back variables if changed
-	//if(OriginalCommandTeam != GetCurrentTeam())
-	//{
-		SetCurrentTeam(OriginalCommandTeam);
-		PendingCommandTeam = CurrentCommandTeam;
-	//}
-	//if(OriginalCommand != PendingCommand)
-		PendingCommand = OriginalCommand;
+	// set back variables
+	SetCurrentTeam(OriginalCommandTeam);
+	PendingCommandTeam = CurrentCommandTeam;
+	PendingCommand = OriginalCommand;
 		
     return;
 }
