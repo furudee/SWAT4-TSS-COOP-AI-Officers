@@ -691,8 +691,8 @@ function bool FallIn(Pawn CommandGiver, vector CommandOrigin)
 	// only post the goal if we are allowed
 	if (CanExecuteCommand())
 	{
-		// if we're not a sub element, or if the other team is not falling in, or holding status differs
-		if (!IsSubElement() || !IsOtherSubElementFallingIn() || HoldingStatusDiffers())
+		// if we're not a sub element, or if the other team is not falling in, or holding status differs, or other team is falling in on another player
+		if (!IsSubElement() || !IsOtherSubElementFallingIn() || HoldingStatusDiffers() || (IsOtherSubElementFallingIn() && GetOtherTeam().CurrentSquadCommandGoal.CommandGiver != CommandGiver))
 		{
 			SquadFallInGoal = new class'SquadFallInGoal'(AI_Resource(SquadAI), CommandGiver, CommandOrigin);
 			assert(SquadFallInGoal != None);
