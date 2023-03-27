@@ -171,6 +171,9 @@ function UpdateDoorKnowledgeForOfficers(Door TargetDoor)
 		{
 			// it's locked!  let everyone know.
 			NotifyOfficersDoorLocked(TargetDoor);
+			// update door knowledge for team
+			SwatTargetDoor.SetLockedKnowledge(0, 1);
+			SwatTargetDoor.SetLockedKnowledge(2, 1);
 		}
 
 		// need to know if a door is locked AND wedged, so there's no else if here
@@ -178,6 +181,9 @@ function UpdateDoorKnowledgeForOfficers(Door TargetDoor)
 		{
 			// it's wedged!  let everyone know.
 			NotifyOfficersDoorWedged(TargetDoor);
+			// update door knowledge for team
+			SwatTargetDoor.SetLockedKnowledge(0, 1);
+			SwatTargetDoor.SetLockedKnowledge(2, 1);
 		}
 	}
 	
@@ -186,6 +192,9 @@ function UpdateDoorKnowledgeForOfficers(Door TargetDoor)
 	{
 		// it's open!  let everyone know.
 		NotifyOfficersDoorCanOpen(TargetDoor);
+		// update door knowledge for team
+		SwatTargetDoor.SetLockedKnowledge(0, 0);
+		SwatTargetDoor.SetLockedKnowledge(2, 0);
 	}
 }
 
@@ -193,6 +202,8 @@ private function NotifyOfficersDoorLocked(Door TargetDoor)
 {
 	local int i;
 	local Pawn OfficerIter;
+	local Pawn Player;
+	local Controller Iter;
 
 	// notify all of the AI Officers.
 	for(i=0; i<GetElementSquad().pawns.length; ++i)
@@ -205,15 +216,25 @@ private function NotifyOfficersDoorLocked(Door TargetDoor)
 		}
 	}
 
-	// notify the player Officer
-	// note that this could be BAD if there are ever more than one players
-	ISwatPawn(Level.GetLocalPlayerController().Pawn).SetDoorLockedBelief(TargetDoor, true);
+	// notify the player Officer	
+	for(Iter = Level.ControllerList; Iter != None; Iter=Iter.NextController)
+	{
+		if (Iter.IsA('PlayerController'))
+		{
+			Player = Iter.Pawn;
+			if(Player != None)
+				ISwatPawn(Player).SetDoorLockedBelief(TargetDoor, true);
+		}	
+	}
 }
 
 function NotifyOfficersDoorWedged(Door TargetDoor)
 {
 	local int i;
 	local Pawn OfficerIter;
+	local Pawn Player;
+	local Controller Iter;
+	
 
 	// notify all of the AI Officers.
 	for(i=0; i<GetElementSquad().pawns.length; ++i)
@@ -227,14 +248,25 @@ function NotifyOfficersDoorWedged(Door TargetDoor)
 	}
 
 	// notify the player Officer
-	// note that this could be BAD if there are ever more than one players
-	ISwatPawn(Level.GetLocalPlayerController().Pawn).SetDoorWedgedBelief(TargetDoor, true);
+	for(Iter = Level.ControllerList; Iter != None; Iter=Iter.NextController)
+	{
+		if (Iter.IsA('PlayerController'))
+		{
+			Player = Iter.Pawn;
+			if(Player != None)
+				ISwatPawn(Player).SetDoorWedgedBelief(TargetDoor, true);
+		}	
+	}
 }
 
 function NotifyOfficersDoorWedgeRemoved(Door TargetDoor)
 {
 	local int i;
 	local Pawn OfficerIter;
+	local Pawn Player;
+	local Controller Iter;
+	
+	log(self$"::NotifyOfficersDoorWedgeRemoved");
 
 	// notify all of the AI Officers.
 	for(i=0; i<GetElementSquad().pawns.length; ++i)
@@ -248,15 +280,25 @@ function NotifyOfficersDoorWedgeRemoved(Door TargetDoor)
 	}
 
 	// notify the player Officer
-	// note that this could be BAD if there are ever more than one players
-	ISwatPawn(Level.GetLocalPlayerController().Pawn).SetDoorWedgedBelief(TargetDoor, false);
+	for(Iter = Level.ControllerList; Iter != None; Iter=Iter.NextController)
+	{
+		if (Iter.IsA('PlayerController'))
+		{
+			Player = Iter.Pawn;
+			if(Player != None)
+				ISwatPawn(Player).SetDoorWedgedBelief(TargetDoor, false);
+		}	
+	}
 }
 
 private function NotifyOfficersDoorCanOpen(Door TargetDoor)
 {
 	local int i;
 	local Pawn OfficerIter;
-
+	local Pawn Player;
+	local Controller Iter;
+	
+	log(self$"::NotifyOfficersDoorCanOpen");
 	// notify all of the AI Officers.
 	for(i=0; i<GetElementSquad().pawns.length; ++i)
 	{
@@ -268,11 +310,20 @@ private function NotifyOfficersDoorCanOpen(Door TargetDoor)
 			ISwatPawn(OfficerIter).SetDoorWedgedBelief(TargetDoor, false);
 		}
 	}
-
+	
 	// notify the player Officer
-	// note that this could be BAD if there are ever more than one players
-	ISwatPawn(Level.GetLocalPlayerController().Pawn).SetDoorLockedBelief(TargetDoor, false);
-	ISwatPawn(Level.GetLocalPlayerController().Pawn).SetDoorWedgedBelief(TargetDoor, false);
+	for(Iter = Level.ControllerList; Iter != None; Iter=Iter.NextController)
+	{
+		if (Iter.IsA('PlayerController'))
+		{
+			Player = Iter.Pawn;
+			if(Player != None)
+			{
+				ISwatPawn(Player).SetDoorLockedBelief(TargetDoor, false);
+				ISwatPawn(Player).SetDoorWedgedBelief(TargetDoor, false);
+			}
+		}	
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

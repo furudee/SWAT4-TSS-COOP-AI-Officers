@@ -155,7 +155,8 @@ private function bool IsStackUpPointBlocked()
 	local ElementSquadInfo Element;
 	local Pawn OfficerIter, Player;
 	local StackUpPoint StackUpPoint;
-
+	local Controller Iter;
+	
 	StackUpPoint = GetStackUpPoint();
 	assert(StackUpPoint != None);
 
@@ -174,11 +175,29 @@ private function bool IsStackUpPointBlocked()
 	}
 
 	// check the player
-	Player = Level.GetLocalPlayerController().Pawn;
-	if (class'Pawn'.static.checkConscious(Player))
+	if(Level.NetMode == NM_Standalone)
 	{
-		if (Player.ReachedDestination(StackUpPoint))
-			return true;
+		Player = Level.GetLocalPlayerController().Pawn;
+		if (class'Pawn'.static.checkConscious(Player))
+		{
+			if (Player.ReachedDestination(StackUpPoint))
+				return true;
+		}
+	}
+	else
+	{
+		for(Iter = Level.ControllerList; Iter != None; Iter=Iter.NextController)
+		{
+			if (Iter.IsA('PlayerController'))
+			{
+				Player = Iter.Pawn;
+				if (class'Pawn'.static.checkConscious(Player))
+				{
+					if (Player.ReachedDestination(StackUpPoint))
+						return true;
+				}
+			}
+		}
 	}
 
 	return false;

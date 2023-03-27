@@ -2154,6 +2154,10 @@ simulated function SetPendingInteractor(Pawn Interactor)
 	PendingInteractor = Interactor;
 }
 
+function SetLockedKnowledge(int Team, int Locked)
+{
+	LockedKnowledge[ Team ] = Locked;
+}
 
 // only for doors opening the opposite of the Other
 simulated function bool IsBlockedFor(Pawn Other)  
