@@ -176,6 +176,8 @@ function StartCommand()
 			PendingCommandOrigin,
 			Player,
 			PendingCommandHold );
+			
+		log(self$":: -> [CLIENT] ServerOrderOfficers -> PendingCommand: "$PendingCommand$" PendingCommandTargetActor: "$PendingCommandTargetActor$" PendingCommandTargetLocation: "$PendingCommandTargetLocation$" CommandTeamName: "$CommandTeamName$" PendingCommandOrigin: "$PendingCommandOrigin$" Player: "$Player$" PendingCommandHold: "$PendingCommandHold);
 	}
 }
 

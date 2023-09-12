@@ -173,7 +173,7 @@ function ValidatePocketForSelection( Pocket thePocket )
 ///////////////////////////
 function LoadLoadOut( String loadOutName, optional bool bForceSpawn )
 {
-//log( "[dkaplan] Loading loadout with name: "$loadOutName$", bForceSpawn = "$bForceSpawn );
+	log( "[dkaplan] Loading loadout with name: "$loadOutName$", bForceSpawn = "$bForceSpawn );
     //destroy previous before creating the new
     if( MyCurrentLoadOut != None && bForceSpawn )
     {
@@ -193,8 +193,8 @@ function LoadLoadOut( String loadOutName, optional bool bForceSpawn )
 
 function SaveLoadOut( String loadOutName )
 {
-//log( "[dkaplan] Saveing loadout with name: "$loadOutName );
-//MyCurrentLoadOut.PrintLoadOutSpecToMPLog();
+	log( "[dkaplan] Saveing loadout with name: "$loadOutName );
+	MyCurrentLoadOut.PrintLoadOutSpecToMPLog();
 
     MyCurrentLoadOut.SaveConfig( loadOutName );
 }
@@ -279,7 +279,7 @@ function LoadAmmoForWeapon( Pocket thePocket, class<FiredWeapon> WeaponClass )
 function ChangeLoadOut( Pocket thePocket )
 {
     local class<actor> theItem;
-    
+	log(self$"::ChangeLoadOut");
     theItem = class<actor>(EquipmentList[thePocket].GetObject());
 
     MyCurrentLoadOut.LoadOutSpec[thePocket] = theItem;
@@ -399,7 +399,7 @@ function Scrolled( Pocket thePocket, bool bLeftUsed )
 function UpdateIndex( Pocket thePocket )
 {
     local string str;
-
+	//log(self$" :: UpdateIndex");
     if( EquipmentList[thePocket] == None )
         return;
         

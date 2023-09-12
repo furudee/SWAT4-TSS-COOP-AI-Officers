@@ -8,6 +8,19 @@
 class SwatMPLoadoutPanel extends SwatLoadoutPanel
     ;
 
+var enum LoadOutOwner
+{
+    LoadOutOwner_Player,
+    LoadOutOwner_RedOne,
+    LoadOutOwner_RedTwo,
+    LoadOutOwner_BlueOne,
+    LoadOutOwner_BlueTwo
+} ActiveLoadOutOwner;
+
+var(SWATGui) private EditInline Config GUIButton MyNextOfficerButton;
+var(SWATGui) private EditInline Config GUIButton MyPreviousOfficerButton;
+var(SWATGui) private EditInline EditConst DynamicLoadOutSpec MyCurrentLoadOuts[LoadOutOwner.EnumCount] "holds all current loadout info";
+
 ///////////////////////////
 // Initialization & Page Delegates
 ///////////////////////////
@@ -15,6 +28,8 @@ function InitComponent(GUIComponent MyOwner)
 {
 	Super.InitComponent(MyOwner);
 	SwatGuiController(Controller).SetMPLoadoutPanel(self);
+	MyNextOfficerButton.OnClick=OnOfficerButtonClick;
+	MyPreviousOfficerButton.OnClick=OnOfficerButtonClick;
 }
 
 function LoadMultiPlayerLoadout()
@@ -26,11 +41,36 @@ function LoadMultiPlayerLoadout()
 
 protected function SpawnLoadouts() 
 {
-    LoadLoadOut( "CurrentMultiplayerLoadOut", true );
+    local int i;
+    for( i = 0; i < LoadOutOwner.EnumCount; i++ )
+    {
+        if( MyCurrentLoadOuts[ i ] != None )
+            continue;
+        
+        ActiveLoadOutOwner=LoadOutOwner(i);
+        LoadLoadOut( "Current"$GetConfigName(ActiveLoadOutOwner), true );
+    	MyCurrentLoadOuts[ i ] = MyCurrentLoadOut;
+    	MyCurrentLoadOut = None;
+    }
+    
+    ActiveLoadOutOwner = LoadOutOwner_Player;
+    MyCurrentLoadOut = MyCurrentLoadOuts[ ActiveLoadOutOwner ];
+
+    //LoadLoadOut( "CurrentMultiplayerLoadOut", true );
 }
 
 protected function DestroyLoadouts() 
 {
+    local int i;
+
+    //destroy the actual loadouts here?
+    for( i = 0; i < LoadOutOwner.EnumCount; i++ )
+    {
+        if( MyCurrentLoadOuts[i] != None )
+            MyCurrentLoadOuts[i].destroy();
+        MyCurrentLoadOuts[i] = None;
+    }
+	
     if( MyCurrentLoadOut != None )
         MyCurrentLoadOut.destroy();
     MyCurrentLoadOut = None;
@@ -44,15 +84,15 @@ function LoadLoadOut( String loadOutName, optional bool bForceSpawn )
     Super.LoadLoadOut( loadOutName, bForceSpawn );
 
 //    MyCurrentLoadOut.ValidateLoadOutSpec();
-    SwatGUIController(Controller).SetMPLoadOut( MyCurrentLoadOut );
+    //SwatGUIController(Controller).SetMPLoadOut( MyCurrentLoadOut );
 }
 
 function ChangeLoadOut( Pocket thePocket )
 {
     local class<actor> theItem;
-//log("[dkaplan] changing loadout for pocket "$GetEnum(Pocket,thePocket) );
+	log("[dkaplan] changing loadout for pocket "$GetEnum(Pocket,thePocket) );
     Super.ChangeLoadOut( thePocket );
-    SaveLoadOut( "CurrentMultiPlayerLoadout" ); //save to current loadout
+    //SaveLoadOut( "CurrentMultiPlayerLoadout" ); //save to current loadout
 
     switch (thePocket)
     {
@@ -109,6 +149,50 @@ function bool CheckTeamValidity( eTeamValidity type )
 
 	       // Item is usable by any team   or // Suspect only item and player is suspect    or // SWAT only item and player is not a suspect
 	return Super.CheckTeamValidity( type ) || (type == TEAMVALID_SuspectsOnly && IsSuspect) || (type == TEAMVALID_SWATOnly && !IsSuspect);
+}
+
+function String GetConfigName( LoadOutOwner theOfficer )
+{
+    local String ret;
+    switch (theOfficer)
+    {
+        case LoadOutOwner_Player:
+            ret="MultiplayerLoadOut";
+            break;
+        case LoadOutOwner_RedOne:
+            ret="OfficerRedOneLoadOut";
+            break;
+        case LoadOutOwner_RedTwo:
+            ret="OfficerRedTwoLoadOut";
+            break;
+        case LoadOutOwner_BlueOne:
+            ret="OfficerBlueOneLoadOut";
+            break;
+        case LoadOutOwner_BlueTwo:
+            ret="OfficerBlueTwoLoadOut";
+            break;
+    }
+    return ret;
+}
+
+private function OnOfficerButtonClick(GuiComponent Sender)
+{
+	switch(Sender)
+	{
+		case MyNextOfficerButton:
+			if( ActiveLoadOutOwner == LoadOutOwner_BlueTwo )
+				ActiveLoadOutOwner = LoadOutOwner_Player;
+			else ActiveLoadOutOwner = LoadOutOwner(ActiveLoadOutOwner + 1);
+			break;
+		case MyPreviousOfficerButton:
+			if( ActiveLoadOutOwner == LoadOutOwner_Player )
+				ActiveLoadOutOwner = LoadOutOwner_BlueTwo;
+			else ActiveLoadOutOwner = LoadOutOwner(ActiveLoadOutOwner - 1);
+	}
+	
+	MyCurrentLoadOut = MyCurrentLoadOuts[ActiveLoadOutOwner];
+	InitialDisplay();
+	log("ActiveLoadOutOwner: "$ActiveLoadOutOwner$" - "$GetConfigName(ActiveLoadOutOwner));
 }
 
 defaultproperties

@@ -109,7 +109,7 @@ function DebugSeenPawns()
 //
 // State Code
 
-latent function EquipOptiwand()
+simulated latent function EquipOptiwand()
 {
 	Optiwand = ISwatOfficer(m_Pawn).GetItemAtSlot(Slot_Optiwand);
 	assert(Optiwand != None);
@@ -117,7 +117,7 @@ latent function EquipOptiwand()
 	Optiwand.LatentWaitForIdleAndEquip();
 }
 
-private function name GetUseOptiwandAnimation()
+simulated function name GetUseOptiwandAnimation()
 {
 	if (bMirrorAroundCorner)
 	{
@@ -129,7 +129,7 @@ private function name GetUseOptiwandAnimation()
 	}
 }
 
-latent function UseOptiwand()
+simulated latent function UseOptiwand()
 {
 	local int MirroringAnimChannel;
 

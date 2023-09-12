@@ -197,7 +197,7 @@ latent function RotateToDoor()
 	CurrentRotateTowardActorGoal = None;
 }
 
-function EquipBreachingCharge()
+simulated function EquipBreachingCharge()
 {
 	BreachingCharge = ISwatOfficer(m_Pawn).GetItemAtSlot(SLOT_Breaching);
 	assert(BreachingCharge != None);
@@ -247,7 +247,7 @@ latent function MoveToSafeLocation()
 	CurrentMoveToActorGoal = None;
 }
 
-function EquipDetonator()
+simulated function EquipDetonator()
 {
 	local ISwatOfficer Officer;
     Officer = ISwatOfficer(m_Pawn);

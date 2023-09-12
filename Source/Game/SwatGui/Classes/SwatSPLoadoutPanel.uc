@@ -270,7 +270,7 @@ function ApplyToAll()
 function SetRadioGroup(GUIRadioButton group)
 {
     local String ForcedLoadout;
-    
+    log(self$"::SetRadioGroup");
     Super.SetRadioGroup( group );
 
 	switch (group)

@@ -1316,6 +1316,8 @@ state Speaking
 						PendingCommandOrigin,
 						Player,
 						PendingCommandHold );
+						
+				log(self$":: -> [CLIENT] ServerOrderOfficers -> PendingCommand: "$PendingCommand$" PendingCommandTargetActor: "$PendingCommandTargetActor$" PendingCommandTargetLocation: "$PendingCommandTargetLocation$" CommandTeamName: "$CommandTeamName$" PendingCommandOrigin: "$PendingCommandOrigin$" Player: "$Player$" PendingCommandHold: "$PendingCommandHold);
 				}
             }
             else
@@ -1443,6 +1445,8 @@ state SpeakingCommand extends Speaking
 					PendingCommandOrigin,
 					Player,
 					PendingCommandHold );
+				
+				log(self$":: -> [CLIENT] ServerOrderOfficers -> PendingCommand: "$PendingCommand$" PendingCommandTargetActor: "$PendingCommandTargetActor$" PendingCommandTargetLocation: "$PendingCommandTargetLocation$" CommandTeamName: "$CommandTeamName$" PendingCommandOrigin: "$PendingCommandOrigin$" Player: "$Player$" PendingCommandHold: "$PendingCommandHold);
 			}
         }
         //else, PendingCommand is probably a new command that was just started
