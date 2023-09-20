@@ -348,6 +348,14 @@ private function ClearChatHistory()
     }
 }
 
+function NotifyUpdatedLoadout(String loadOut )
+{
+	log(self$"::NotifyUpdatedLoadout");
+	if( MPLoadoutPanel != None )
+		MPLoadoutPanel.CheckUpdatedLoadout( loadOut );
+}
+
+
 function bool OnMessageRecieved( String Msg, Name Type )
 {
 //log( "[dkaplan]: >>>OnMessageRecieved: Msg = "$Msg$", Type = "$Type$", ViewportOwner.Actor = "$ViewportOwner.Actor);

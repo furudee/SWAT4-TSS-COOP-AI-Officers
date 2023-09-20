@@ -2,6 +2,7 @@ class DynamicLoadOutSpec extends LoadOutValidationBase
     perObjectConfig
     Config(DynamicLoadout);
 
+var(DEBUG) config string Editor;
 
 defaultproperties
 {

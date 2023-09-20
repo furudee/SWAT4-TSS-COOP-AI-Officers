@@ -122,7 +122,7 @@ function InitComponent(GUIComponent MyOwner)
 event Activate()
 {
     Super.Activate();
-
+	log(self$"::Activate()");
     SpawnLoadouts();
 	InitialDisplay();
 }
@@ -143,6 +143,7 @@ function InitialDisplay()
 
     for( i = 0; i < Pocket.EnumCount; i++ )
     {
+		//log(self$"::InitialDisplay | Pocket(i) "$Pocket(i)$" ActiveTab "$ActiveTab);
 	    if( !CheckValidity( GC.AvailableEquipmentPockets[i].DisplayValidity ) )
 	        Continue;
 
@@ -179,15 +180,19 @@ function LoadLoadOut( String loadOutName, optional bool bForceSpawn )
     {
         MyCurrentLoadOut.destroy();
     }
-    
-    if( MyCurrentLoadOut == None || bForceSpawn )
-    {
-        MyCurrentLoadOut = PlayerOwner().Spawn( class'DynamicLoadOutSpec', None, name( loadOutName ) );
-    }
-    else
-    {
-        MyCurrentLoadOut.ResetConfig( loadOutName );  //Loads the transient reference from the config data for this object
-    }
+	
+	if( PlayerOwner().Level.IsPlayingCOOP && GC.SwatGameState != GAMESTATE_MidGame && bForceSpawn )
+	{
+		if(loadoutName != "CurrentMultiplayerLoadOut")
+			SwatGamePlayerController(PlayerOwner()).GetAIOfficerLoadout(loadOutName);
+	}
+	
+	if( MyCurrentLoadOut == None || bForceSpawn )
+		MyCurrentLoadOut = PlayerOwner().Spawn( class'DynamicLoadOutSpec', None, name( loadOutName ) );
+	else
+		MyCurrentLoadOut.ResetConfig( loadOutName );  //Loads the transient reference from the config data for this object
+	
+
     AssertWithDescription( MyCurrentLoadOut != None, "[dkaplan]: Failed to load loadout ["$loadOutName$"]");
 }
 
@@ -553,6 +558,33 @@ private function bool IsPocketDisplayedInActiveTab( Pocket pock )
     }
     
     return false;
+}
+
+function String GetHumanReadableLoadout( String theLoadout )
+{
+    local String ret;
+    switch (theLoadout)
+    {
+		case "CurrentMultiplayerLoadOut":
+            ret=PlayerOwner().GetHumanReadableName();
+            break;
+        case "CurrentMultiplayerOfficerRedOneLoadOut":
+            ret="Officer Red One";
+            break;
+        case "CurrentMultiplayerOfficerRedTwoLoadOut":
+            ret="Officer Red Two";
+            break;
+        case "CurrentMultiplayerOfficerBlueOneLoadOut":
+            ret="Officer Blue One";
+            break;
+        case "CurrentMultiplayerOfficerBlueTwoLoadOut":
+            ret="Officer Blue One";
+            break;
+		default:
+			ret="LoadOut";
+			break;
+    }
+    return ret;
 }
 
 defaultproperties

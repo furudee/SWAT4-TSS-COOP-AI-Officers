@@ -311,7 +311,9 @@ replication
 		ServerRetryStatsAuth;
 		
 	reliable if(Role < ROLE_Authority)
-		ServerOrderOfficers;
+		ServerOrderOfficers, ServerGetAIOfficerLoadout, ServerSetAIOfficerPocket, ServerSetAIOfficerMaterial, ServerSetAIOfficerSkin, ServerSetAIOfficerEditor, ServerNotifyUpdatedLoadout;
+	reliable if (Role == ROLE_Authority)
+		ClientSetAIOfficerPocket, ClientSetAIOfficerMaterial, ClientSetAIOfficerSkin, ClientSetAIOfficerEditor, ClientNotifyUpdatedLoadout;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4897,6 +4899,188 @@ exec function CommandOrEquip(NumberRow Row, int Number)
     else
         EquipSlot(Number);
 }
+
+/////////////////////////////////////////////////////////////////////////////
+// Scuffed implementation to send and save loadouts on clients and servers //
+
+simulated function GetAIOfficerLoadout( String loadOut ) 
+{
+	log(self$"::GetAIOfficerLoadout");
+	ServerGetAIOfficerLoadout(loadOut, self);
+}
+
+simulated function SetAIOfficerLoadout( String loadOut )
+{
+	local int i;
+	local DynamicLoadOutSpec DLOS;
+	
+	log(self$"::SetAIOfficerLoadout | loadout: "$loadOut);
+	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
+
+	for( i = 0; i < Pocket.EnumCount; i++ )
+	{
+		ServerSetAIOfficerPocket(loadOut, Pocket(i), DLOS.LoadoutSpec[i]);
+	}
+		
+	for( i = 0; i < DLOS.MaterialPocket.EnumCount; i++ )
+	{
+		ServerSetAIOfficerMaterial(loadOut, Pocket(i), DLOS.MaterialSpec[i]);
+	}
+		
+	ServerSetAIOfficerSkin(loadOut, DLOS.CustomSkinSpec);
+	ServerSetAIOfficerEditor(loadOut, GetHumanReadableName());
+	ServerNotifyUpdatedLoadout( loadOut );
+	DLOS.Destroy();
+}
+
+function ServerNotifyUpdatedLoadout( String loadOut )
+{
+	local Controller i;
+	local SwatGamePlayerController current;
+
+	for(i = Level.ControllerList; i != None; i = i.NextController)
+	{
+		current = SwatGamePlayerController(i);
+		log(self$"::ServerNotifyUpdatedLoadout current: "$current$" self: "$current == self);
+		if(current != None && current != self)
+			current.GetAIOfficerLoadout( loadOut );
+	}
+}
+
+simulated function ClientNotifyUpdatedLoadout( String loadOut )
+{
+	log(self$"::ClientNotifyUpdatedLoadout");
+	SwatGUIControllerBase(Player.GUIController).NotifyUpdatedLoadout( loadOut );
+
+}
+
+// Spawn and walk the loadout, send each item to client, notify client of updated loadout
+function ServerGetAIOfficerLoadout( String loadOut, Controller caller )
+{
+	local DynamicLoadOutSpec DLOS;
+	local Controller i;
+	local int j;
+	local SwatGamePlayerController current;
+	local String playerName;
+	
+	log(self$"::ServerGetAIOfficerLoadout | loadout: "$loadOut);
+	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
+	
+	current = SwatGamePlayerController(caller);	
+	for( j = 0; j < Pocket.EnumCount; j++ )
+	{
+		current.ClientSetAIOfficerPocket(loadOut, Pocket(j), DLOS.LoadoutSpec[j]);
+	}
+	
+	for( j = 0; j < DLOS.MaterialPocket.EnumCount; j++ )
+	{
+		current.ClientSetAIOfficerMaterial(loadOut, Pocket(j), DLOS.MaterialSpec[j]);
+
+	}		
+	current.ClientSetAIOfficerSkin(loadOut, DLOS.CustomSkinSpec);
+	current.ClientSetAIOfficerEditor(loadOut, DLOS.Editor);
+	current.ClientNotifyUpdatedLoadout( loadOut );
+	
+	DLOS.Destroy();
+}
+
+function SetAIOfficerPocket(String loadOut, Pocket pocket, class<Actor> pocketItem)
+{
+	local DynamicLoadOutSpec DLOS;
+	log(self$"::SetAIOfficerPocket | loadout: "$loadOut$ " | Pocket: "$pocket$" | pocketItem: "$pocketItem);
+
+	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
+	if(DLOS.LoadoutSpec[pocket] != pocketItem)
+	{
+		DLOS.LoadoutSpec[pocket] = pocketItem;
+		DLOS.SaveConfig( loadOut );
+	}
+	DLOS.Destroy();
+}
+
+function SetAIOfficerMaterial(String loadOut, Pocket pocket, Material mat)
+{
+	local DynamicLoadOutSpec DLOS;
+	log(self$"::SetAIOfficerMaterial | loadout: "$loadOut$ " | Pocket: "$pocket$" | Mat: "$mat);
+	
+	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
+	if(DLOS.MaterialSpec[pocket] != mat)
+	{
+		DLOS.MaterialSpec[pocket] = mat;
+		DLOS.SaveConfig( loadOut );
+	}
+	DLOS.Destroy();
+}
+
+function SetAIOfficerSkin(String loadOut, String customSkin)
+{
+	local DynamicLoadOutSpec DLOS;
+	log(self$"::SetAIOfficerSkin | loadout: "$loadOut$ " customSkin: "$customSkin);
+
+	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
+	if(DLOS.CustomSkinSpec != customSkin)
+	{
+		DLOS.CustomSkinSpec = customSkin;
+		DLOS.SaveConfig( loadOut );
+	}
+	DLOS.Destroy();
+}
+
+function SetAIOfficerEditor(String loadOut, String playerName)
+{
+	local DynamicLoadOutSpec DLOS;
+	log(self$"::SetAIOfficerEditor | loadout: "$loadOut$ " playerName: "$playerName);
+
+	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
+	if(DLOS.Editor != playerName)
+	{
+		DLOS.Editor = playerName;
+		DLOS.SaveConfig( loadOut );
+	}
+	DLOS.Destroy();
+}
+
+function ServerSetAIOfficerPocket(String loadOut, Pocket pocket, class<Actor> pocketItem)
+{
+	SetAIOfficerPocket(loadout, pocket, pocketItem);
+}
+
+function ServerSetAIOfficerMaterial(String loadOut, Pocket pocket, Material mat)
+{
+	SetAIOfficerMaterial(loadout, pocket, mat);
+}
+
+function ServerSetAIOfficerSkin(String loadOut, String customSkin)
+{
+	SetAIOfficerSkin(loadout, customSkin);
+}
+
+function ServerSetAIOfficerEditor(String loadOut, String playerName)
+{
+	SetAIOfficerEditor(loadout, playerName);
+}
+
+simulated function ClientSetAIOfficerPocket(String loadOut, Pocket pocket, class<Actor> pocketItem)
+{
+	SetAIOfficerPocket(loadout, pocket, pocketItem);
+}
+
+simulated function ClientSetAIOfficerMaterial(String loadOut, Pocket pocket, Material mat)
+{
+	SetAIOfficerMaterial(loadout, pocket, mat);
+}
+
+simulated function ClientSetAIOfficerSkin(String loadOut, String customSkin)
+{
+	SetAIOfficerSkin(loadout, customSkin);
+}
+
+simulated function ClientSetAIOfficerEditor(String loadOut, String playerName)
+{
+	SetAIOfficerEditor(loadout, playerName);
+}
+
+/////////////////////////////////////////////////////////////////////////////
 
 function ServerOrderOfficers(        
 		int CommandIndex,           //index into Commands array of the command that is being given
