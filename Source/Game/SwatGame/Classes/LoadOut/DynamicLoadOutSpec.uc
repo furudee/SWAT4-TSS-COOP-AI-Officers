@@ -2,7 +2,11 @@ class DynamicLoadOutSpec extends LoadOutValidationBase
     perObjectConfig
     Config(DynamicLoadout);
 
+import enum EEntryType from SwatStartPointBase;
+
 var(DEBUG) config string Editor;
+var(DEBUG) config bool bSpawn;
+var(DEBUG) config EEntryType Entrypoint;
 
 defaultproperties
 {

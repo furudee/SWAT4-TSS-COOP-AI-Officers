@@ -578,7 +578,7 @@ function String GetHumanReadableLoadout( String theLoadout )
             ret="Officer Blue One";
             break;
         case "CurrentMultiplayerOfficerBlueTwoLoadOut":
-            ret="Officer Blue One";
+            ret="Officer Blue Two";
             break;
 		default:
 			ret="LoadOut";

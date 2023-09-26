@@ -6,6 +6,7 @@ Campaign.ini
 SwatGUIState.ini
 MissionResults.ini
 UnrealEd.ini
+DynamicLoadout.ini
 Inc/
 Packages.*
 *.u

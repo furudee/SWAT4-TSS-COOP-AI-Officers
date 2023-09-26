@@ -523,8 +523,11 @@ simulated function InitLoadOut( String LoadOutName )
         {
             LoadOutSpec = Spawn(class'DynamicLoadOutSpec', self, CustomScen.BlueTwoLoadOut);
         }
-	    else
+	    else if( Level.NetMode == NM_StandAlone )
     	    LoadOutSpec = Spawn(class'DynamicLoadOutSpec', self, name("Current"$LoadOutName));
+		else 
+			LoadOutSpec = Spawn(class'DynamicLoadOutSpec', self, name("CurrentMultiplayer"$LoadOutName));
+
     }
 	assert(LoadOutSpec != None);
 

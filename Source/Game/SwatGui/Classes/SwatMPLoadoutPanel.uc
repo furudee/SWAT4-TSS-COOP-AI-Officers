@@ -17,12 +17,18 @@ var enum LoadOutOwner
     LoadOutOwner_BlueTwo
 } ActiveLoadOutOwner;
 
-var(SWATGui) private EditInline Config GUIButton MyNextOfficerButton;
-var(SWATGui) private EditInline Config GUIButton MyPreviousOfficerButton;
-var(SWATGui) private EditInline Config GUIButton MySaveLoadoutButton;
+import enum EEntryType from SwatGame.SwatStartPointBase;
 
-var(SWATGui) private EditInline EditConst DynamicLoadOutSpec MyCurrentLoadOuts[LoadOutOwner.EnumCount] "holds all current loadout info";
+var(SWATGui) private EditInline Config GUIButton 				MyNextOfficerButton;
+var(SWATGui) private EditInline Config GUIButton 				MyPreviousOfficerButton;
+var(SWATGui) private EditInline Config GUIButton 				MySaveLoadoutButton;
+var(SWATGui) private EditInline Config GUILabel 				MyLoadoutLabel;
+var(SWATGui) private EditInline Config GUILabel 				MySpawnLabel;
+var(SWATGui) private EditInline Config GUILabel 				MyEntrypointLabel;
+var(SWATGui) private EditInline Config GUICheckBoxButton		MySpawnButton;
+var(SWATGui) private EditInline Config GUIComboBox 				MyEntrypointBox;
 
+var(SWATGui) private EditInline EditConst DynamicLoadOutSpec	MyCurrentLoadOuts[LoadOutOwner.EnumCount] "holds all current loadout info";
 var private bool bHasReceivedLoadouts; // only need to retrieve loadouts from server once
 
 ///////////////////////////
@@ -30,11 +36,29 @@ var private bool bHasReceivedLoadouts; // only need to retrieve loadouts from se
 ///////////////////////////
 function InitComponent(GUIComponent MyOwner)
 {
+	local int i;
 	Super.InitComponent(MyOwner);
 	SwatGuiController(Controller).SetMPLoadoutPanel(self);
+	
+	for(i = 0; i < EEntryType.EnumCount; i++)
+	{
+		MyEntrypointBox.AddItem( Mid( String( GetEnum(EEntryType, i) ), 3 ) );
+	}
+	MyEntrypointBox.SetIndex(0);
+	
 	MyNextOfficerButton.OnClick=OnOfficerButtonClick;
 	MyPreviousOfficerButton.OnClick=OnOfficerButtonClick;
+	MySpawnButton.OnClick=OnSpawnButtonClick;
+	MyEntrypointBox.OnChange=OnEntrypointChange;
 	MySaveLoadoutButton.OnClick=OnSaveLoadoutButtonClick;
+	
+	if( !PlayerOwner().Level.IsPlayingCOOP )
+	{
+		MyNextOfficerButton.DisableComponent();
+		MyPreviousOfficerButton.DisableComponent();
+		MySpawnButton.DisableComponent();
+		MyEntrypointBox.DisableComponent();
+	}
 }
 
 function LoadMultiPlayerLoadout()
@@ -57,13 +81,15 @@ protected function SpawnLoadouts()
             continue;
         
         ActiveLoadOutOwner=LoadOutOwner(i);
-        LoadLoadOut( "Current"$GetConfigName(ActiveLoadOutOwner), true );
+        LoadLoadOut( GetConfigName(ActiveLoadOutOwner), true );
     	MyCurrentLoadOuts[ i ] = MyCurrentLoadOut;
     	MyCurrentLoadOut = None;
     }
     
     ActiveLoadOutOwner = LoadOutOwner_Player;
     MyCurrentLoadOut = MyCurrentLoadOuts[ ActiveLoadOutOwner ];
+	MyLoadoutLabel.SetCaption( "Current loadout: "$GetHumanReadableLoadout(GetConfigName(ActiveLoadOutOwner)) );
+	SetSpawnAndEntryButton();
 	bHasReceivedLoadouts = true;
 }
 
@@ -90,6 +116,7 @@ protected function DestroyLoadouts()
 ///////////////////////////
 function LoadLoadOut( String loadOutName, optional bool bForceSpawn )
 {
+	// will retrieve AI loadout from server, otherwise load from config
 	if(!bHasReceivedLoadouts)
 		Super.LoadLoadOut( loadOutName, bForceSpawn );
 	else Super.LoadLoadOut( loadOutName, false );
@@ -171,55 +198,64 @@ function String GetConfigName( LoadOutOwner theOfficer )
     switch (theOfficer)
     {
         case LoadOutOwner_Player:
-            ret="MultiplayerLoadOut";
+            ret="CurrentMultiplayerLoadOut";
             break;
         case LoadOutOwner_RedOne:
-            ret="MultiplayerOfficerRedOneLoadOut";
+            ret="CurrentMultiplayerOfficerRedOneLoadOut";
             break;
         case LoadOutOwner_RedTwo:
-            ret="MultiplayerOfficerRedTwoLoadOut";
+            ret="CurrentMultiplayerOfficerRedTwoLoadOut";
             break;
         case LoadOutOwner_BlueOne:
-            ret="MultiplayerOfficerBlueOneLoadOut";
+            ret="CurrentMultiplayerOfficerBlueOneLoadOut";
             break;
         case LoadOutOwner_BlueTwo:
-            ret="MultiplayerOfficerBlueTwoLoadOut";
+            ret="CurrentMultiplayerOfficerBlueTwoLoadOut";
             break;
     }
     return ret;
 }
 
-function CheckUpdatedLoadout( String updatedloadOut )
+function CheckUpdatedLoadout( String updatedLoadout )
 {
 	local String currentLoadout;
 	local DynamicLoadOutSpec newLoadout;
 	local int i;
 	
-	log(self$"::CheckUpdatedLoadout updatedloadOut "$updatedloadOut);
+	log(self$"::CheckUpdatedLoadout updatedLoadout "$updatedLoadout);
 	for(i = 0; i < LoadOutOwner.EnumCount; i++)
 	{		
-		// has not returned from first SpawnLoadouts()
-		if(MyCurrentLoadOuts[i] == None)
-			continue;
-			
-		currentLoadout = "Current"$GetConfigName(LoadOutOwner(i));
-		if( updatedloadOut == currentLoadout )
+		currentLoadout = GetConfigName(LoadOutOwner(i));
+		if( updatedLoadout == currentLoadout )
 		{
-			newLoadout = PlayerOwner().Spawn( class'DynamicLoadOutSpec', None, name( updatedloadOut ) );
+			newLoadout = PlayerOwner().Spawn( class'DynamicLoadOutSpec', None, name( updatedLoadout ) );
+			PlayerOwner().ClientMessage(
+				"Received loadout for: "$GetHumanReadableLoadout(updatedLoadout)$
+				" | Spawn: "$newLoadout.bSpawn$
+				" | Entrypoint: "$Mid( GetEnum( EEntryType, newLoadout.Entrypoint ), 3)$
+				" | Edited by: "$newLoadout.Editor, 'Say');
+			
+			log(
+				"Received loadout for: "$GetHumanReadableLoadout(updatedLoadout)$
+				" | Spawn: "$newLoadout.bSpawn$
+				" | Entrypoint: "$Mid( GetEnum( EEntryType, newLoadout.Entrypoint ), 3)$
+				" | Edited by: "$newLoadout.Editor);
+			
+			// has not returned from first SpawnLoadouts() so its handled there
+			if(MyCurrentLoadOuts[i] == None)
+			{
+				newLoadout.destroy();
+				continue;
+			}
+				
 			MyCurrentLoadOuts[i].destroy();
 			MyCurrentLoadOuts[i] = newLoadout;
 			
-			// prevent spamming chatbox
-			if(bHasReceivedLoadouts)
-			{
-				PlayerOwner().ClientMessage("Received loadout for: "$GetHumanReadableLoadout(updatedloadOut)$" | Edited by: "$newLoadout.Editor, 'Say');
-			}
-			log("Received loadout for: "$GetHumanReadableLoadout(updatedloadOut)$" | Edited by: "$newLoadout.Editor);
-			
-			currentLoadout = "Current"$GetConfigName(ActiveLoadOutOwner);
-			if(currentLoadout == updatedloadOut)
+			currentLoadout = GetConfigName(ActiveLoadOutOwner);
+			if(currentLoadout == updatedLoadout)
 			{
 				MyCurrentLoadOut = MyCurrentLoadOuts[i];
+				SetSpawnAndEntryButton();
 			}
 			InitialDisplay();
 			break;
@@ -242,21 +278,56 @@ private function OnOfficerButtonClick(GuiComponent Sender)
 			else ActiveLoadOutOwner = LoadOutOwner(ActiveLoadOutOwner - 1);
 	}
 	
-	MyCurrentLoadOut = None;
-	LoadLoadOut( "Current"$GetConfigName(ActiveLoadOutOwner), false );
+	MyLoadoutLabel.SetCaption( "Current loadout: "$GetHumanReadableLoadout(GetConfigName(ActiveLoadOutOwner)) );
+	LoadLoadOut( GetConfigName(ActiveLoadOutOwner), false );
+	SetSpawnAndEntryButton();
 	InitialDisplay();
 	log(self$"::OnOfficerButtonClick | ActiveLoadOutOwner: "$ActiveLoadOutOwner);
-
 }
+
+private function OnSpawnButtonClick(GuiComponent Sender)
+{
+	MyCurrentLoadOut.bSpawn = MySpawnButton.bChecked;
+}
+
+private function OnEntrypointChange(GuiComponent Sender)
+{
+	MyCurrentLoadOut.Entrypoint = EEntryType( MyEntrypointBox.GetIndex() );
+}
+
+private function SetSpawnAndEntryButton()
+{
+	local DynamicLoadOutSpec Loadout;
+	
+	if(ActiveLoadOutOwner == LoadOutOwner_Player || MyCurrentLoadOut == None)
+	{
+		MySpawnButton.SetChecked( true );
+		MySpawnButton.DisableComponent();
+		MyEntrypointBox.DisableComponent();
+	}
+	else
+	{
+		//Loadout = PlayerOwner().Spawn( class'DynamicLoadOutSpec', None, name( GetConfigName(ActiveLoadOutOwner) ) );
+		MySpawnButton.SetChecked( MyCurrentLoadOut.bSpawn );
+		MyEntrypointBox.SetIndex( MyCurrentLoadOut.Entrypoint );
+		MySpawnButton.EnableComponent();
+		MyEntrypointBox.EnableComponent();
+		//Loadout.Destroy();
+	}
+}
+
 
 private function OnSaveLoadoutButtonClick(GuiComponent Sender)
 {
-	SaveLoadOut( "Current"$GetConfigName(ActiveLoadOutOwner) );
-	PlayerOwner().ClientMessage("Saving loadout for: "$GetHumanReadableLoadout("Current"$GetConfigName(ActiveLoadOutOwner)), 'Say');
+	SaveLoadOut( GetConfigName(ActiveLoadOutOwner) );
+	PlayerOwner().ClientMessage(
+		"Saving loadout for: "$GetHumanReadableLoadout( GetConfigName(ActiveLoadOutOwner) )$
+		" | Spawn: "$MySpawnButton.bChecked$
+		" | Entrypoint: "$Mid( GetEnum( EEntryType, MyEntrypointBox.GetIndex() ), 3 ), 'Say');
 
 	if(ActiveLoadOutOwner != LoadOutOwner_Player)
 	{
-		SwatGamePlayerController(PlayerOwner()).SetAIOfficerLoadout( "Current"$GetConfigName(ActiveLoadOutOwner) );
+		SwatGamePlayerController(PlayerOwner()).SetAIOfficerLoadout( GetConfigName(ActiveLoadOutOwner) );
 	}
 }
 

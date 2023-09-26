@@ -16,6 +16,7 @@ import enum AimPenaltyType from Engine.FiredWeapon;
 import enum FireMode from Engine.FiredWeapon;
 import enum DoorPosition from Engine.Door;
 import enum eVoiceType from SwatGame.SwatGUIConfig;
+import enum EEntryType from SwatStartPointBase;
 
 var int FlashbangRetinaImageTextureWidth;
 var int FlashbangRetinaImageTextureHeight;
@@ -311,9 +312,11 @@ replication
 		ServerRetryStatsAuth;
 		
 	reliable if(Role < ROLE_Authority)
-		ServerOrderOfficers, ServerGetAIOfficerLoadout, ServerSetAIOfficerPocket, ServerSetAIOfficerMaterial, ServerSetAIOfficerSkin, ServerSetAIOfficerEditor, ServerNotifyUpdatedLoadout;
+		ServerOrderOfficers, ServerGetAIOfficerLoadout, ServerSetAIOfficerPocket, ServerSetAIOfficerMaterial,
+		ServerSetAIOfficerSkin, ServerSetAIOfficerEditor, ServerNotifyUpdatedLoadout, ServerSetAIOfficerSpawn, ServerSetAIOfficerEntrypoint;
 	reliable if (Role == ROLE_Authority)
-		ClientSetAIOfficerPocket, ClientSetAIOfficerMaterial, ClientSetAIOfficerSkin, ClientSetAIOfficerEditor, ClientNotifyUpdatedLoadout;
+		ClientSetAIOfficerPocket, ClientSetAIOfficerMaterial, ClientSetAIOfficerSkin, ClientSetAIOfficerEditor,
+		ClientNotifyUpdatedLoadout, ClientSetAIOfficerSpawn, ClientSetAIOfficerEntrypoint;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4917,18 +4920,24 @@ simulated function SetAIOfficerLoadout( String loadOut )
 	log(self$"::SetAIOfficerLoadout | loadout: "$loadOut);
 	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
 
-	for( i = 0; i < Pocket.EnumCount; i++ )
+	if(Level.NetMode != NM_ListenServer)
 	{
-		ServerSetAIOfficerPocket(loadOut, Pocket(i), DLOS.LoadoutSpec[i]);
+		for( i = 0; i < Pocket.EnumCount; i++ )
+		{
+			ServerSetAIOfficerPocket(loadOut, Pocket(i), DLOS.LoadoutSpec[i]);
+		}
+			
+		for( i = 0; i < DLOS.MaterialPocket.EnumCount; i++ )
+		{
+			ServerSetAIOfficerMaterial(loadOut, Pocket(i), DLOS.MaterialSpec[i]);
+		}
+			
+		ServerSetAIOfficerSkin(loadOut, DLOS.CustomSkinSpec);
+		ServerSetAIOfficerEditor(loadOut, GetHumanReadableName());
+		ServerSetAIOfficerSpawn(loadOut, DLOS.bSpawn);
+		ServerSetAIOfficerEntrypoint(loadOut, DLOS.Entrypoint);	
 	}
-		
-	for( i = 0; i < DLOS.MaterialPocket.EnumCount; i++ )
-	{
-		ServerSetAIOfficerMaterial(loadOut, Pocket(i), DLOS.MaterialSpec[i]);
-	}
-		
-	ServerSetAIOfficerSkin(loadOut, DLOS.CustomSkinSpec);
-	ServerSetAIOfficerEditor(loadOut, GetHumanReadableName());
+	
 	ServerNotifyUpdatedLoadout( loadOut );
 	DLOS.Destroy();
 }
@@ -4937,6 +4946,8 @@ function ServerNotifyUpdatedLoadout( String loadOut )
 {
 	local Controller i;
 	local SwatGamePlayerController current;
+
+	//FlushConfig();	// write config in memory to disk
 
 	for(i = Level.ControllerList; i != None; i = i.NextController)
 	{
@@ -4979,8 +4990,12 @@ function ServerGetAIOfficerLoadout( String loadOut, Controller caller )
 	}		
 	current.ClientSetAIOfficerSkin(loadOut, DLOS.CustomSkinSpec);
 	current.ClientSetAIOfficerEditor(loadOut, DLOS.Editor);
+	current.ClientSetAIOfficerSpawn(loadOut, DLOS.bSpawn);
+	current.ClientSetAIOfficerEntrypoint(loadOut, DLOS.Entrypoint);
+	
 	current.ClientNotifyUpdatedLoadout( loadOut );
 	
+	//current.FlushConfig();	// write config in memory to disk
 	DLOS.Destroy();
 }
 
@@ -4993,6 +5008,7 @@ function SetAIOfficerPocket(String loadOut, Pocket pocket, class<Actor> pocketIt
 	if(DLOS.LoadoutSpec[pocket] != pocketItem)
 	{
 		DLOS.LoadoutSpec[pocket] = pocketItem;
+		//DLOS.SaveConfig( loadOut, , false );	// not written to the disk until FlushConfig()
 		DLOS.SaveConfig( loadOut );
 	}
 	DLOS.Destroy();
@@ -5007,7 +5023,9 @@ function SetAIOfficerMaterial(String loadOut, Pocket pocket, Material mat)
 	if(DLOS.MaterialSpec[pocket] != mat)
 	{
 		DLOS.MaterialSpec[pocket] = mat;
+		//DLOS.SaveConfig( loadOut, , false );
 		DLOS.SaveConfig( loadOut );
+
 	}
 	DLOS.Destroy();
 }
@@ -5021,6 +5039,7 @@ function SetAIOfficerSkin(String loadOut, String customSkin)
 	if(DLOS.CustomSkinSpec != customSkin)
 	{
 		DLOS.CustomSkinSpec = customSkin;
+		//DLOS.SaveConfig( loadOut, , false );
 		DLOS.SaveConfig( loadOut );
 	}
 	DLOS.Destroy();
@@ -5035,10 +5054,42 @@ function SetAIOfficerEditor(String loadOut, String playerName)
 	if(DLOS.Editor != playerName)
 	{
 		DLOS.Editor = playerName;
+		//DLOS.SaveConfig( loadOut, , false );
 		DLOS.SaveConfig( loadOut );
 	}
 	DLOS.Destroy();
 }
+
+function SetAIOfficerSpawn(String loadOut, bool bSpawn)
+{
+	local DynamicLoadOutSpec DLOS;
+	log(self$"::SetAIOfficerSpawn | loadout: "$loadOut$ " bSpawn: "$bSpawn);
+
+	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
+	if(DLOS.bSpawn != bSpawn)
+	{
+		DLOS.bSpawn = bSpawn;
+		//DLOS.SaveConfig( loadOut, , false );
+		DLOS.SaveConfig( loadOut );
+	}
+	DLOS.Destroy();
+}
+
+function SetAIOfficerEntrypoint(String loadOut, EEntryType Entrypoint)
+{
+	local DynamicLoadOutSpec DLOS;
+	log(self$"::SetAIOfficerEntrypoint | loadout: "$loadOut$ " Entrypoint: "$Entrypoint);
+
+	DLOS = Spawn( class'DynamicLoadOutSpec', None, name( loadOut ));
+	if(DLOS.Entrypoint != Entrypoint)
+	{
+		DLOS.Entrypoint = Entrypoint;
+		//DLOS.SaveConfig( loadOut, , false );
+		DLOS.SaveConfig( loadOut );
+	}
+	DLOS.Destroy();
+}
+
 
 function ServerSetAIOfficerPocket(String loadOut, Pocket pocket, class<Actor> pocketItem)
 {
@@ -5060,6 +5111,16 @@ function ServerSetAIOfficerEditor(String loadOut, String playerName)
 	SetAIOfficerEditor(loadout, playerName);
 }
 
+function ServerSetAIOfficerSpawn(String loadOut, bool bSpawn)
+{
+	SetAIOfficerSpawn(loadout, bSpawn);
+}
+
+function ServerSetAIOfficerEntrypoint(String loadOut, EEntryType Entrypoint)
+{
+	SetAIOfficerEntrypoint(loadout, Entrypoint);
+}
+
 simulated function ClientSetAIOfficerPocket(String loadOut, Pocket pocket, class<Actor> pocketItem)
 {
 	SetAIOfficerPocket(loadout, pocket, pocketItem);
@@ -5078,6 +5139,16 @@ simulated function ClientSetAIOfficerSkin(String loadOut, String customSkin)
 simulated function ClientSetAIOfficerEditor(String loadOut, String playerName)
 {
 	SetAIOfficerEditor(loadout, playerName);
+}
+
+simulated function ClientSetAIOfficerSpawn(String loadOut, bool bSpawn)
+{
+	SetAIOfficerSpawn(loadout, bSpawn);
+}
+
+simulated function ClientSetAIOfficerEntrypoint(String loadOut, EEntryType Entrypoint)
+{
+	SetAIOfficerEntrypoint(loadout, Entrypoint);
 }
 
 /////////////////////////////////////////////////////////////////////////////

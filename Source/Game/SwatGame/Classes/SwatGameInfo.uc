@@ -820,6 +820,11 @@ function OnMissionStarted()
     Level.TickSpecialEnabled = true;
 
     GameEvents.MissionStarted.Triggered();
+	
+	if( Level.IsCOOPServer )
+	{
+		SpawnOfficers();
+	}
 
 	// send a message that the level has started
 	dispatchMessage(new class'Gameplay.MessageLevelStart'(GetCustomScenario() != None));
@@ -1633,10 +1638,8 @@ function PlayerLoggedIn(PlayerController NewPlayer)
     }
 
 	// This call may need to be moved at some point so that the entry point for the spawned officers
-	// is the same as the player.  For now I will just leave it here.  [crombie]
-	
-	// spawning will be changed later
-	if ( Level.NetMode == NM_Standalone || ( Level.IsCOOPServer && Level.NetMode != NM_Client && GetNumSpawnedOfficers() == 0 ))
+	// is the same as the player.  For now I will just leave it here.  [crombie]	
+	if ( Level.NetMode == NM_Standalone )
     {
         SpawnOfficers();
     }
@@ -1710,27 +1713,78 @@ function InitVoiceReplicationInfo()
 		VoiceReplicationInfo.DefaultChannel = i;
 }
 
-private function bool ShouldSpawnOfficerRedOne()  { return ((Repo.GuiConfig.CurrentMission.CustomScenario == None) || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerRedOne);  }
-private function bool ShouldSpawnOfficerRedTwo()  { return ((Repo.GuiConfig.CurrentMission.CustomScenario == None) || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerRedTwo);  }
-private function bool ShouldSpawnOfficerBlueOne() { return ((Repo.GuiConfig.CurrentMission.CustomScenario == None) || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerBlueOne); }
-private function bool ShouldSpawnOfficerBlueTwo() { return ((Repo.GuiConfig.CurrentMission.CustomScenario == None) || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerBlueTwo); }
+private function bool ShouldSpawnOfficerRedOne(EEntryType EntryType)  
+{
+	local DynamicLoadOutSpec Loadout;
+	local bool willSpawn;
+	
+	if(Level.NetMode == NM_StandAlone)
+		return Repo.GuiConfig.CurrentMission.CustomScenario == None || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerRedOne;
+	
+	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayerOfficerRedOneLoadOut" ) );
+	willSpawn = Loadout.bSpawn && Loadout.Entrypoint == EntryType;
+	Loadout.Destroy();
+	return willSpawn;
+}
+
+private function bool ShouldSpawnOfficerRedTwo(EEntryType EntryType)  
+{ 
+	local DynamicLoadOutSpec Loadout;
+	local bool willSpawn;
+	
+	if(Level.NetMode == NM_StandAlone)
+		return Repo.GuiConfig.CurrentMission.CustomScenario == None || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerRedTwo;
+	
+	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayerOfficerRedTwoLoadOut" ) );
+	willSpawn = Loadout.bSpawn && Loadout.Entrypoint == EntryType;
+	Loadout.Destroy();
+	return willSpawn;
+}
+
+private function bool ShouldSpawnOfficerBlueOne(EEntryType EntryType) 
+{ 
+	local DynamicLoadOutSpec Loadout;
+	local bool willSpawn;
+	
+	if(Level.NetMode == NM_StandAlone)
+		return Repo.GuiConfig.CurrentMission.CustomScenario == None || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerBlueOne;
+	
+	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayerOfficerBlueOneLoadOut" ) );
+	willSpawn = Loadout.bSpawn && Loadout.Entrypoint == EntryType;
+	Loadout.Destroy();
+	return willSpawn;
+}
+
+private function bool ShouldSpawnOfficerBlueTwo(EEntryType EntryType) 
+{
+	local DynamicLoadOutSpec Loadout;
+	local bool willSpawn;
+	
+	if(Level.NetMode == NM_StandAlone)
+		return Repo.GuiConfig.CurrentMission.CustomScenario == None || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerBlueTwo;
+	
+	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayerOfficerBlueTwoLoadOut" ) );
+	willSpawn = Loadout.bSpawn && Loadout.Entrypoint == EntryType;
+	Loadout.Destroy();
+	return willSpawn;
+}
 
 private function bool ShouldSpawnOfficerAtStart(SwatOfficerStart OfficerStart, EEntryType DesiredEntryType)
 {
 	assert(OfficerStart != None);
 
-	if (OfficerStart.EntryType == DesiredEntryType)
+	if (OfficerStart.EntryType == DesiredEntryType || Level.IsCOOPServer )
 	{
 		switch (OfficerStart.OfficerStartType)
 		{
 			case RedOneStart:
-				return ShouldSpawnOfficerRedOne();
+				return ShouldSpawnOfficerRedOne( OfficerStart.EntryType );
 			case RedTwoStart:
-				return ShouldSpawnOfficerRedTwo();
+				return ShouldSpawnOfficerRedTwo( OfficerStart.EntryType );
 			case BlueOneStart:
-				return ShouldSpawnOfficerBlueOne();
+				return ShouldSpawnOfficerBlueOne( OfficerStart.EntryType );
 			case BlueTwoStart:
-				return ShouldSpawnOfficerBlueTwo();
+				return ShouldSpawnOfficerBlueTwo( OfficerStart.EntryType );
 		}
 	}
 
