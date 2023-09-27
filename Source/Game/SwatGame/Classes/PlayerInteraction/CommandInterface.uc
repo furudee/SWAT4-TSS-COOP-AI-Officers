@@ -1525,10 +1525,8 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
 {
     local Actor PendingCommandTargetActor;
 	local Vector PendingCommandTargetLocation;
-	local Vector PendingCommandOrigin2;
 	local name OriginalCommandTeam;
 	local Command OriginalCommand;
-	
     local name LastFocusSource;
 	local bool bCommandIssued;	// was a command actually issued?
 
@@ -1537,11 +1535,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
 	// set variables
 	PendingCommandTargetActor = PCTargetActor;
 	PendingCommandTargetLocation = PCTargetLocation;
-	if(PendingCommandOrigin == PCOrigin)
-		PendingCommandOrigin2 = PCOrigin;
-	else
-		PendingCommandOrigin2 = PendingCommandOrigin;
-		
+	
 	// change original variables ( THE ONLY CHANGE TO CLASS VARIABLES ) //
 	OriginalCommand = PendingCommand;
 	OriginalCommandTeam = GetCurrentTeam();
@@ -1549,6 +1543,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
 	SetCurrentTeam(CommandTeam);
 	PendingCommandTeam = CurrentCommandTeam;
 	PendingCommand = Commands[CommandIndex];
+	
 	//////////////////////////////////////////////////////////////////////
 	
     if (!Level.IsCOOPServer && Level.GetLocalPlayerController().Pawn == None)
@@ -1608,7 +1603,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
 			return;
 		}
     }
-	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --PendingCommandTargetActor:: "$PendingCommandTargetActor$" --PendingCommandTargetLocation:: "$PendingCommandTargetLocation$" --PendingCommandOrigin2::"$PendingCommandOrigin2);
+	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --PendingCommandTargetActor:: "$PendingCommandTargetActor$" --PendingCommandTargetLocation:: "$PendingCommandTargetLocation$" --PCOrigin::"$PCOrigin);
 	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --OriginalCommand:: "$OriginalCommand$" --PendingCommand:: "$PendingCommand$" --OriginalCommandTeam::"$OriginalCommandTeam$" --CurrentCommandTeam::"$CurrentCommandTeam);
 	log(self$"::SendCommandToOfficers [COMMAND INTERFACE] --bHoldCommand:: "$bHoldCommand);
 
@@ -1644,33 +1639,33 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
 			ClearHeldCommandCaptions(PendingCommandTeam);
 			bCommandIssued = PendingCommandTeam.Zulu(
 				CommandingPlayer,
-                PendingCommandOrigin2);
+                PCOrigin);
 			break;
 
         case Command_FallIn:
             bCommandIssued = PendingCommandTeam.FallIn(
                 CommandingPlayer,
-                PendingCommandOrigin2);
+                PCOrigin);
             break;
 
         case Command_MoveTo:
             bCommandIssued = PendingCommandTeam.MoveTo(
                 CommandingPlayer,
-                PendingCommandOrigin2,
+                PCOrigin,
                 PendingCommandTargetLocation);
             break;
 
         case Command_Cover:
             bCommandIssued = PendingCommandTeam.Cover(
                 CommandingPlayer, 
-                PendingCommandOrigin2,
+                PCOrigin,
                 PendingCommandTargetLocation);
             break;
 
         case Command_Deploy_Flashbang:
             bCommandIssued = PendingCommandTeam.DeployThrownItemAt(
                 CommandingPlayer, 
-                PendingCommandOrigin2,
+                PCOrigin,
                 Slot_Flashbang,
                 PendingCommandTargetLocation,
                 SwatDoor(PendingCommandTargetActor));
@@ -1680,7 +1675,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
         case Command_Deploy_CSGas:
             bCommandIssued = PendingCommandTeam.DeployThrownItemAt(
                 CommandingPlayer, 
-                PendingCommandOrigin2,
+                PCOrigin,
                 Slot_CSGasGrenade,
                 PendingCommandTargetLocation,
                 SwatDoor(PendingCommandTargetActor));
@@ -1690,7 +1685,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
         case Command_Deploy_StingGrenade:
             bCommandIssued = PendingCommandTeam.DeployThrownItemAt(
                 CommandingPlayer, 
-                PendingCommandOrigin2,
+                PCOrigin,
                 Slot_StingGrenade,
                 PendingCommandTargetLocation,
                 SwatDoor(PendingCommandTargetActor));
@@ -1700,7 +1695,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
        case Command_Deploy_GrenadeLauncher:
             bCommandIssued = PendingCommandTeam.DeployGrenadeLauncher(
 				CommandingPlayer, 
-				PendingCommandOrigin2,
+				PCOrigin,
 				PendingCommandTargetActor,
 				PendingCommandTargetLocation);
             Back();
@@ -1710,14 +1705,14 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (PendingCommandTargetActor != None)
                 bCommandIssued = PendingCommandTeam.DisableTarget(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                         PendingCommandTargetActor);
             break;
 
         case Command_RemoveWedge:
             bCommandIssued = PendingCommandTeam.RemoveWedge(
                 CommandingPlayer, 
-                PendingCommandOrigin2,
+                PCOrigin,
                 SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1725,7 +1720,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (PendingCommandTargetActor != None)
 				bCommandIssued = PendingCommandTeam.SecureEvidence(
 					CommandingPlayer, 
-					PendingCommandOrigin2,
+					PCOrigin,
                     PendingCommandTargetActor);
             break;
 
@@ -1733,7 +1728,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (PendingCommandTargetActor != None)
                 bCommandIssued = PendingCommandTeam.MirrorCorner(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                         PendingCommandTargetActor);
             break;
 
@@ -1743,7 +1738,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.StackUpAndTryDoorAt(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1751,7 +1746,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.PickLock(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1759,7 +1754,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.MoveAndClear(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1772,7 +1767,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BreachAndClear(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1782,7 +1777,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BangAndClear(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1793,7 +1788,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BreachBangAndClear(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1803,7 +1798,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.GasAndClear(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1814,7 +1809,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BreachGasAndClear(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1824,7 +1819,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.StingAndClear(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1835,7 +1830,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.BreachStingAndClear(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1843,7 +1838,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.DeployC2(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             Back();
             break;
@@ -1852,7 +1847,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.DeployShotgun(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             Back();
             break;
@@ -1861,7 +1856,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.DeployWedge(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             Back();
             break;
@@ -1870,7 +1865,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.CloseDoor(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1878,7 +1873,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.MirrorRoom(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1886,7 +1881,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidDoor(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.MirrorUnderDoor(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     SwatDoor(PendingCommandTargetActor));
             break;
 
@@ -1896,7 +1891,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             if (CheckForValidRestrainable(PendingCommand, PendingCommandTargetActor))
                 bCommandIssued = PendingCommandTeam.Restrain(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     Pawn(PendingCommandTargetActor));
             break;
 
@@ -1905,7 +1900,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             {
                 bCommandIssued = PendingCommandTeam.DeployPepperSpray(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     Pawn(PendingCommandTargetActor));
                 Back();
             }
@@ -1916,7 +1911,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             {
                 bCommandIssued = PendingCommandTeam.DeployTaser(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     Pawn(PendingCommandTargetActor));
                 Back();
             }
@@ -1927,7 +1922,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             {
                 bCommandIssued = PendingCommandTeam.DeployLessLethalShotgun(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     Pawn(PendingCommandTargetActor));
                 Back();
             }
@@ -1938,7 +1933,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             {
                 bCommandIssued = PendingCommandTeam.DeployPepperBallGun(
                     CommandingPlayer, 
-                    PendingCommandOrigin2,
+                    PCOrigin,
                     Pawn(PendingCommandTargetActor));
                 Back();
             }
@@ -1947,7 +1942,7 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
         case Command_Deploy_Lightstick:
             bCommandIssued = PendingCommandTeam.DeployLightstick(
                 CommandingPlayer,
-                PendingCommandOrigin2,
+                PCOrigin,
                 PendingCommandTargetLocation);
             break;
 
