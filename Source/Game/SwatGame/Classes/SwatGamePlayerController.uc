@@ -938,7 +938,7 @@ simulated event InitiateViewportUse( IControllableViewport inNewViewport )
 // This client->server RPC will, if ShouldActivate is true, choose the next
 // available teammate to use as the viewport target. Or, reset the viewport
 // if ShouldActivate is false.
-function ServerActivateOfficerViewport( bool ShouldActivate )
+function ServerActivateOfficerViewport( bool ShouldActivate, optional String Officer )
 {
     local string ViewportType;
 
@@ -963,8 +963,13 @@ function ServerActivateOfficerViewport( bool ShouldActivate )
 
         if (Level.GetEngine().EnableDevTools)
             mplog( "Setting viewporttype manually for netgame");
-
-        if ( NetPlayer(Pawn) != None )
+		
+		// no snipers on MP so pressing sniper key gets player viewport, others get red or blue
+		if( Officer != "Sniper" )
+		{
+			ViewportType = Officer;
+		}
+        else if( NetPlayer(Pawn) != None )
 		{
             ViewportType = NetPlayer(Pawn).GetViewportType();
 		}
@@ -1994,7 +1999,7 @@ exec function ShowViewport(string ViewportType)
         // pawn is assigned to the replicated variable
         // ReplicatedViewportTeammate. OnReplicatedViewportTeammateChanged is
         // called on the client whenever that variable changes.
-        ServerActivateOfficerViewport( true );
+        ServerActivateOfficerViewport( true, ViewportType );
 
         // If we're on a listen server, PostNetReceive is not called on us so we'll
         // never detect a change in ReplicatedViewportTeammate there, like we do

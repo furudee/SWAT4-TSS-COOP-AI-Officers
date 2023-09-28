@@ -360,31 +360,31 @@ simulated function NotifyStoppedMovingTimerCallback()
 ///////////////////////////////////////////////////////////////////////////////
 //
 // IControllableThroughViewport Interface
-function Actor GetViewportOwner()
+simulated function Actor GetViewportOwner()
 {
     return Self;
 }
 
 // Possibly offset from the controlled direction
-function            OffsetViewportRotation( out Rotator ViewportRotation );
+simulated function            OffsetViewportRotation( out Rotator ViewportRotation );
 
 // Called to allow the viewport to modify mouse acceleration
 simulated function            AdjustMouseAcceleration( out Vector MouseAccel );
 
 // Called whenever the mouse is moving (and this controllable is being controlled)
-function            OnMouseAccelerated( out Vector MouseAccel );
+simulated function            OnMouseAccelerated( out Vector MouseAccel );
 
-function string GetViewportType()
+simulated function string GetViewportType()
 {
     return string(name);
 }
 
-function string  GetViewportDescription()
+simulated function string  GetViewportDescription()
 {
     return "";
 }
 
-function string  GetViewportName()
+simulated function string  GetViewportName()
 {
     return GetHumanReadableName();
 }
@@ -394,70 +394,75 @@ simulated function bool   CanIssueCommands()
     return true;
 }
 
-function            OnBeginControlling()
+simulated function            OnBeginControlling()
 {
     LockAim();
 }
 
-function            OnEndControlling()
+simulated function            OnEndControlling()
 {
     UnLockAim();
 }
 
-function Vector  GetViewportLocation()
+simulated function Vector  GetViewportLocation()
 {
     return GetViewpoint();
 }
 
-function Rotator GetViewportDirection()
+simulated function Rotator GetViewportDirection()
 {
-    return Rotator(GetViewDirection());
+	local Rotator r;
+	
+	r = Rotator(GetViewDirection());
+	if(Level.NetMode != NM_StandAlone)
+		r.Yaw = r.Yaw - 16384;	// somehow off by about 90 degrees so this is an epic hack
+    return r;
 }
 
-function float   GetViewportPitchClamp()
+simulated function float   GetViewportPitchClamp()
 {
     return 55.0;
 }
 
-function float   GetViewportYawClamp()
+simulated function float   GetViewportYawClamp()
 {
     return 0;  // Zero means no restrictions
 }
 
-function         SetRotationToViewport(Rotator inNewRotation)
+simulated function         SetRotationToViewport(Rotator inNewRotation)
 {
     AimToRotation(inNewRotation);
 }
 
-function bool   ShouldDrawViewport()
+simulated function bool   ShouldDrawViewport()
 {
     return !checkDead(Self) && !IsIncapacitated();
 }
 
-function Material GetViewportOverlay()
+simulated function Material GetViewportOverlay()
 {
     return ViewportOverlayMaterial;
 }
 
 // Return the original rotation...
-function Rotator    GetOriginalDirection()
+simulated function Rotator    GetOriginalDirection()
 {
     return Rotation;
 }
 
 // For controlling...
-function float      GetViewportPitchSpeed()
+simulated function float      GetViewportPitchSpeed()
 {
     return 0.6;
 }
 
 // For controlling...
-function float      GetViewportYawSpeed()
+simulated function float      GetViewportYawSpeed()
 {
     return 0.6;
 }
 
-function bool   ShouldDrawReticle()
+simulated function bool   ShouldDrawReticle()
 {
     return true;
 }
@@ -897,10 +902,10 @@ simulated function bool ReadyToTriggerEffectEvents()
 // proper name instead of "OfficerBlueTwo0" or some other auto-generated name
 simulated function String GetHumanReadableName()
 {
-    if (Level.NetMode == NM_StandAlone) 
-    {
+    //if (Level.NetMode == NM_StandAlone) 
+    //{
         return OfficerFriendlyName;
-    }
+    //}
 
     // Superclass will deal non-standalone games, etc
     return Super.GetHumanReadableName();
@@ -934,5 +939,6 @@ defaultproperties
 	bAlwaysRelevant=true
 	bReplicateAnimations=true
 	bNoRepMesh=false
+	//RemoteRole = ROLE_SimulatedProxy;
 }
 
