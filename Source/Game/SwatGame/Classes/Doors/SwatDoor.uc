@@ -537,6 +537,7 @@ simulated function Interact(Pawn Other, optional bool Force)
             NetPlayerPawn = NetPlayer( Other );
             LockedKnowledge[ NetPlayerPawn.GetTeamNumber() ] = 1;
             
+			UpdateOfficerDoorKnowledge();
 			if (Level.GetEngine().EnableDevTools)
 				mplog("Saving locked door knowledge for pawn: "$NetPlayerPawn$", team number: "$NetPlayerPawn.GetTeamNumber());
         }
@@ -1093,7 +1094,7 @@ simulated function UpdateOfficerDoorKnowledge()
     local SwatPawn PlayerPawn;
 
 	// this is only necessary for standalone games
-	if (Level.NetMode == NM_Standalone)
+	if (Level.NetMode == NM_Standalone || Level.IsPlayingCOOP)
 	{
 		PlayerPawn = SwatPawn(Level.GetLocalPlayerController().Pawn);
 
