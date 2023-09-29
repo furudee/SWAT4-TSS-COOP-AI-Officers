@@ -5166,7 +5166,8 @@ function ServerOrderOfficers(
 		name CommandTeam,
 		vector PCOrigin,
 		Pawn CommandingPlayer,
-		bool bHoldCommand )
+		bool bHoldCommand,
+		optional String actorUniqueID )
 {
 	if(Role == ROLE_Authority)
 	{
@@ -5174,10 +5175,10 @@ function ServerOrderOfficers(
 		if(GetCommandInterface() == None)
 			CurrentCommandInterface = Spawn(class'GraphicCommandInterface_MP');
 		
-		log(self$"::ServerOrderOfficers [PLAYER CONTROLLER] --PCTargetActor:: "$PCTargetActor$" --PCTargetLocation:: "$PCTargetLocation$" --CommandingPlayer:: "$CommandingPlayer$" --bHoldCommand:: "$bHoldCommand);
+		log(self$"::ServerOrderOfficers [PLAYER CONTROLLER] Command: "$CurrentCommandInterface.Commands[CommandIndex]$" --PCTargetActor:: "$PCTargetActor$" --PCTargetLocation:: "$PCTargetLocation$" --CommandingPlayer:: "$CommandingPlayer$" --bHoldCommand:: "$bHoldCommand);
 
 		// send the command using hosts commandinterface
-		GetCommandInterface().SendCommandToOfficers(CommandIndex, CommandingPlayer, PCTargetActor, PCTargetLocation, CommandTeam, PCOrigin, bHoldCommand);
+		GetCommandInterface().SendCommandToOfficers(CommandIndex, CommandingPlayer, PCTargetActor, PCTargetLocation, CommandTeam, PCOrigin, bHoldCommand, actorUniqueID);
 	}
 }
 

@@ -1274,6 +1274,7 @@ state Speaking
 		local Vector PendingCommandTargetLocation;
 		local name CommandTeamName;
 		local Pawn Player;
+		local String uniqueID;
 		
         if (SometimesSendInterruptedCommand)
         {
@@ -1307,7 +1308,7 @@ state Speaking
 						PendingCommandTargetLocation = PendingCommandTargetActor.Location;
 					else    //no target actor
 						PendingCommandTargetLocation = GetLastFocusLocation();  //the point where the command interface focus trace was blocked
-						
+					
 					PlayerController.ServerOrderOfficers(
 						PendingCommand.Index,
 						PendingCommandTargetActor,
@@ -1315,7 +1316,10 @@ state Speaking
 						CommandTeamName,
 						PendingCommandOrigin,
 						Player,
-						PendingCommandHold );
+						PendingCommandHold,
+						PendingCommandTargetActor.UniqueID() );
+						
+					log("PendingCommandTargetActor.UniqueID() "$PendingCommandTargetActor.UniqueID());
 						
 				log(self$":: -> [CLIENT] ServerOrderOfficers -> PendingCommand: "$PendingCommand$" PendingCommandTargetActor: "$PendingCommandTargetActor$" PendingCommandTargetLocation: "$PendingCommandTargetLocation$" CommandTeamName: "$CommandTeamName$" PendingCommandOrigin: "$PendingCommandOrigin$" Player: "$Player$" PendingCommandHold: "$PendingCommandHold);
 				}
@@ -1444,8 +1448,11 @@ state SpeakingCommand extends Speaking
 					CommandTeamName,
 					PendingCommandOrigin,
 					Player,
-					PendingCommandHold );
+					PendingCommandHold,
+					PendingCommandTargetActor.UniqueID() );
 				
+				log("PendingCommandTargetActor.UniqueID() "$PendingCommandTargetActor.UniqueID());
+
 				log(self$":: -> [CLIENT] ServerOrderOfficers -> PendingCommand: "$PendingCommand$" PendingCommandTargetActor: "$PendingCommandTargetActor$" PendingCommandTargetLocation: "$PendingCommandTargetLocation$" CommandTeamName: "$CommandTeamName$" PendingCommandOrigin: "$PendingCommandOrigin$" Player: "$Player$" PendingCommandHold: "$PendingCommandHold);
 			}
         }
@@ -1521,7 +1528,7 @@ simulated function bool IsExpectedCommandSource(name CommandSource)
 }
 
 //send the pending command to the officers, now that any necessary speech has completed
-simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer, Actor PCTargetActor, Vector PCTargetLocation, name CommandTeam, Vector PCOrigin, bool bHoldCommand)
+simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer, Actor PCTargetActor, Vector PCTargetLocation, name CommandTeam, Vector PCOrigin, bool bHoldCommand, optional String actorUniqueID)
 {
     local Actor PendingCommandTargetActor;
 	local Vector PendingCommandTargetLocation;
@@ -1717,7 +1724,12 @@ simulated function SendCommandToOfficers(int CommandIndex, Pawn CommandingPlayer
             break;
 
         case Command_SecureEvidence:
-            if (PendingCommandTargetActor != None)
+            if (PendingCommandTargetActor == None && actorUniqueID != "")
+			{
+				PendingCommandTargetActor = FindByUniqueID(None, actorUniqueID);
+				log("actorUniqueID "$actorUniqueID$" PendingCommandTargetActor "$PendingCommandTargetActor);
+			}
+			if(PendingCommandTargetActor != None)
 				bCommandIssued = PendingCommandTeam.SecureEvidence(
 					CommandingPlayer, 
 					PCOrigin,

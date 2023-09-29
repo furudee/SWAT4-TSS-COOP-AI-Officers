@@ -175,8 +175,11 @@ function StartCommand()
 			CommandTeamName,
 			PendingCommandOrigin,
 			Player,
-			PendingCommandHold );
+			PendingCommandHold,
+			PendingCommandTargetActor.UniqueID() );
 			
+		log("PendingCommandTargetActor.UniqueID() "$PendingCommandTargetActor.UniqueID());
+
 		log(self$":: -> [CLIENT] ServerOrderOfficers -> PendingCommand: "$PendingCommand$" PendingCommandTargetActor: "$PendingCommandTargetActor$" PendingCommandTargetLocation: "$PendingCommandTargetLocation$" CommandTeamName: "$CommandTeamName$" PendingCommandOrigin: "$PendingCommandOrigin$" Player: "$Player$" PendingCommandHold: "$PendingCommandHold);
 	}
 }
