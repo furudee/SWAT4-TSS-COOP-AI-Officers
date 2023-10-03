@@ -55,6 +55,10 @@ simulated latent protected function DoUsingHook()
         // Hands
         if (Hands != None)
             Hands.PlayAnim(GetHandsThrowAnimation(Hands));
+			
+		if(Pawn(Owner).IsA('SwatOfficer'))
+			Pawn(Owner).AnimPlaySpecial( GetThirdPersonThrowAnimation(), ICanThrowWeapons(PawnOwner).GetPawnThrowTweenTime(), ICanThrowWeapons(PawnOwner).GetPawnThrowRootBone() );
+		
 
     //
     // Finish
@@ -62,6 +66,9 @@ simulated latent protected function DoUsingHook()
 
         // Pawn
         Pawn(Owner).FinishAnim(PawnThrowAnimationChannel);
+		
+		if(Pawn(Owner).IsA('SwatOfficer'))
+			Pawn(Owner).FinishAnim( Pawn(Owner).AnimGetSpecialChannel() );
 
         // Hands
         if (Hands != None)
@@ -77,7 +84,7 @@ simulated function UsedHook()
     local vector InitialLocation;
     local rotator ThrownDirection;
 	local PlayerController OwnerPC;
-
+	log(self$"::UsedHook");
     if ( IsAvailable() && Level.NetMode != NM_Client )
     {
         Holder = ICanThrowWeapons(Owner);
@@ -219,6 +226,7 @@ simulated function name GetHandsThrowAnimation(Hands Hands)
 
 simulated function name GetThirdPersonThrowAnimation()
 {
+	log(self$"::GetThirdPersonThrowAnimation ThirdPersonThrowAnimation: "$ThirdPersonThrowAnimation);
 	if (ThirdPersonThrowAnimation != '')
 		return ThirdPersonThrowAnimation;
 	else

@@ -56,6 +56,7 @@ simulated latent protected function DoUsingHook()
     local QualifiedUseEquipmentModel QualifiedUseThirdPersonModel;
 
     local bool OwnerIsLocalPlayer;
+	local int SpecialAnimChannel;
 
     mplog( self$"---QualifiedUseEquipment::DoUsingHook()." );
 
@@ -110,12 +111,18 @@ simulated latent protected function DoUsingHook()
         QualifiedUseThirdPersonModel.TriggerEffectEvent('QualifyBegan');
     }
 
+	if(Pawn(Owner).IsA('SwatOfficer'))
+		SpecialAnimChannel = Pawn(Owner).AnimPlaySpecial( Pawn(Owner).GetAnimName(Pawn(Owner).AnimGetEquipmentChannel()) );
+	
     OnUsingBegan();
 
     if (QualifiedUseFirstPersonModel != None)
         QualifiedUseFirstPersonModel.FinishBeginQualify(UseAlternate);
     if (QualifiedUseThirdPersonModel != None)
         QualifiedUseThirdPersonModel.FinishBeginQualify(UseAlternate);
+		
+	if(Pawn(Owner).IsA('SwatOfficer'))
+		Pawn(Owner).FinishAnim(SpecialAnimChannel);
 
     UseBeginTime = Level.TimeSeconds;
 
@@ -136,6 +143,9 @@ simulated latent protected function DoUsingHook()
         QualifiedUseThirdPersonModel.PlayQualifyLoop(UseAlternate);
         QualifiedUseThirdPersonModel.TriggerEffectEvent('Qualifying');
     }
+
+	if(Pawn(Owner).IsA('SwatOfficer'))
+		SpecialAnimChannel = Pawn(Owner).AnimLoopSpecial( Pawn(Owner).GetAnimName(Pawn(Owner).AnimGetEquipmentChannel()) );
 
     //wait to finish or be interrupted
     while (!Interrupted && Level.TimeSeconds < UseBeginTime + CalcQualifyDuration())
@@ -173,32 +183,43 @@ simulated latent protected function DoUsingHook()
         if (QualifiedUseThirdPersonModel != None)
             QualifiedUseThirdPersonModel.UnTriggerEffectEvent('QualifyInterrupted');
     }
+	
+	if(Pawn(Owner).IsA('SwatOfficer'))
+		Pawn(Owner).FinishAnim(SpecialAnimChannel);
 
     if (QualifiedUseFirstPersonModel != None)
         QualifiedUseFirstPersonModel.PlayEndQualify(UseAlternate);
     if (QualifiedUseThirdPersonModel != None)
         QualifiedUseThirdPersonModel.PlayEndQualify(UseAlternate);
+		
+	if(Pawn(Owner).IsA('SwatOfficer'))
+		SpecialAnimChannel = Pawn(Owner).AnimPlaySpecial( Pawn(Owner).GetAnimName(Pawn(Owner).AnimGetEquipmentChannel()) );
 
     if (QualifiedUseFirstPersonModel != None)
         QualifiedUseFirstPersonModel.FinishEndQualify(UseAlternate);
     if (QualifiedUseThirdPersonModel != None)
         QualifiedUseThirdPersonModel.FinishEndQualify(UseAlternate);
+		
+	if(Pawn(Owner).IsA('SwatOfficer'))
+		Pawn(Owner).FinishAnim(SpecialAnimChannel);
 }
 
 simulated latent protected function OnUsingBegan()
 {
+	log(self$"::OnUsingBegan");
     Pawn(Owner).ChangeAnimation();
 }
 
 simulated function OnUsingFinishedHook()
 {
+	log(self$"::OnUsingFinishedHook");
     Pawn(Owner).ChangeAnimation();
 }
 
 simulated function DoQualifyComplete()
 {
 	local PlayerController OwnerPC;
-
+	log(self$"::DoQualifyComplete");
 	if (Owner.IsA('ICanQualifyForUse'))
         ICanQualifyForUse(Owner).OnQualifyCompleted();
 

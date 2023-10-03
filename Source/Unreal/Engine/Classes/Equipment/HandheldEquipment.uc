@@ -794,6 +794,7 @@ simulated latent final private function DoUsing()
 simulated latent protected function PreUsed();      //for subclasses
 simulated latent protected function DoUsingHook()   //override in subclasses
 {
+	local int SpecialAnimChannel;
     //Play, then finish, animations on pawn, hands, and the models they hold.
     //We need to play both first, then finish both, since finishing happens latently,
     //  and we want them to play simultaneously.
@@ -803,12 +804,18 @@ simulated latent protected function DoUsingHook()   //override in subclasses
     if (ThirdPersonModel != None)
         ThirdPersonModel.PlayUse(0);    //no tween
 
+	if(Pawn(Owner).IsA('SwatOfficer'))
+		SpecialAnimChannel = Pawn(Owner).AnimPlaySpecial( Pawn(Owner).GetAnimName(Pawn(Owner).AnimGetEquipmentChannel()) );
+
     OnUsingBegan();
 
     if (FirstPersonModel != None)
         FirstPersonModel.FinishUse();
     if (ThirdPersonModel != None)
         ThirdPersonModel.FinishUse();
+		
+	if(Pawn(Owner).IsA('SwatOfficer'))
+		Pawn(Owner).FinishAnim(SpecialAnimChannel);
 
     // MCJ: If you put an assertion here in the future, remember that the pawn
     // may have died and the animation finished without sending all its
@@ -826,6 +833,7 @@ simulated latent protected function OnUsingBegan();
 //  (the FirstPersonModel and the ThirdPersonModel).
 simulated final function OnUseKeyFrame( optional bool ForceUse )
 {
+	log(self$"::OnUseKeyFrame");
     //Only propagate OnEquipKeyFrame() once.
     //Note that both the Pawn & Hands will get OnUseKeyFrame()
     //  at the same time, whomever's model gets to key-frame first.

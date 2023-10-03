@@ -406,17 +406,22 @@ simulated function            OnEndControlling()
 
 simulated function Vector  GetViewportLocation()
 {
-    return GetViewpoint();
+	local Vector Location;
+	
+	Location = GetViewpoint();
+	if(Level.NetMode == NM_Client)
+		Location.Z = Location.Z + 50;			// getviewpoint gets pawn center so need to adjust on network games
+    return Location;
 }
 
 simulated function Rotator GetViewportDirection()
 {
-	local Rotator r;
+	local Rotator Rotation;
 	
-	r = Rotator(GetViewDirection());
-	if(Level.NetMode != NM_StandAlone)
-		r.Yaw = r.Yaw - 16384;	// somehow off by about 90 degrees so this is an epic hack
-    return r;
+	Rotation = Rotator(GetViewDirection());
+	if(Level.NetMode == NM_Client)
+		Rotation.Yaw = Rotation.Yaw - ( DEGREES_TO_TWOBYTE * 90 );	// somehow off by about 90 degrees so this is an epic hack
+    return Rotation;
 }
 
 simulated function float   GetViewportPitchClamp()
@@ -925,6 +930,34 @@ simulated function OnLightstickKeyFrame()
 	}
 }
 
+simulated function OnActiveItemEquipped()
+{
+	local Controller i;
+	
+	Super.OnActiveItemEquipped();
+	//log(self$"::OnActiveItemEquipped Level.NetMode: "$Level.NetMode);
+	
+	if( Level.NetMode != NM_StandAlone && Level.NetMode != NM_Client )
+	{
+		for(i = Level.ControllerList; i != None; i = i.NextController)
+		{
+			if( i.IsA('PlayerController') )
+			{
+				SwatGamePlayerController(i).ClientEquipAIOfficer( self, GetActiveItem().GetSlot() );
+			}
+		}
+	}
+}
+
+function GetThrownProjectileParams(out vector outLocation, out rotator outRotation)
+{
+	Super.GetThrownProjectileParams( outLocation, outRotation );
+}
+
+function AimToRotation(rotator DesiredRotation)
+{
+	Super.AimToRotation(DesiredRotation);
+}
 ///////////////////////////////////////////////////////////////////////////////
 
 defaultproperties
@@ -939,6 +972,5 @@ defaultproperties
 	bAlwaysRelevant=true
 	bReplicateAnimations=true
 	bNoRepMesh=false
-	//RemoteRole = ROLE_SimulatedProxy;
 }
 

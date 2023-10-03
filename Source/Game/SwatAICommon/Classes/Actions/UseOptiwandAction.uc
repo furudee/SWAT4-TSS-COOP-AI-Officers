@@ -132,12 +132,15 @@ simulated function name GetUseOptiwandAnimation()
 simulated latent function UseOptiwand()
 {
 	local int MirroringAnimChannel;
+	local int SpecialAnimChannel;
 
 	MirroringAnimChannel = m_Pawn.AnimPlayEquipment(kAPT_Normal, GetUseOptiwandAnimation(), OptiwandUseTweenTime);
+	SpecialAnimChannel = m_Pawn.AnimPlaySpecial( GetUseOptiwandAnimation() );
 
 	LookForPawnsUsingOptiwand(GetOptiwandViewOrigin());
 
 	m_Pawn.FinishAnim(MirroringAnimChannel);
+	m_Pawn.FinishAnim(SpecialAnimChannel);
 
 	ReportSeeingPawns();
 

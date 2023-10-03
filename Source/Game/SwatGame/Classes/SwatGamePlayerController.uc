@@ -316,7 +316,7 @@ replication
 		ServerSetAIOfficerSkin, ServerSetAIOfficerEditor, ServerNotifyUpdatedLoadout, ServerSetAIOfficerSpawn, ServerSetAIOfficerEntrypoint;
 	reliable if (Role == ROLE_Authority)
 		ClientSetAIOfficerPocket, ClientSetAIOfficerMaterial, ClientSetAIOfficerSkin, ClientSetAIOfficerEditor,
-		ClientNotifyUpdatedLoadout, ClientSetAIOfficerSpawn, ClientSetAIOfficerEntrypoint;
+		ClientNotifyUpdatedLoadout, ClientSetAIOfficerSpawn, ClientSetAIOfficerEntrypoint, ClientEquipAIOfficer;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4907,6 +4907,25 @@ exec function CommandOrEquip(NumberRow Row, int Number)
     else
         EquipSlot(Number);
 }
+
+
+simulated function ClientEquipAIOfficer( Pawn Officer, EquipmentSlot Slot )
+{
+	local HandheldEquipment CurrentEquipment;
+	local HandheldEquipment PendingEquipment;
+	log(self$"::ClientEquipAIOfficer");
+	
+	if( Level.NetMode != NM_ListenServer )
+	{
+		CurrentEquipment = SwatOfficer(Officer).GetActiveItem();
+		PendingEquipment = SwatOfficer(Officer).GetItemAtSlot(Slot);
+		if( CurrentEquipment != PendingEquipment )
+		{
+			PendingEquipment.Equip();
+		}
+	}
+}
+
 
 /////////////////////////////////////////////////////////////////////////////
 // Scuffed implementation to send and save loadouts on clients and servers //
