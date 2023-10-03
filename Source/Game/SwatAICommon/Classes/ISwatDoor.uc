@@ -56,3 +56,5 @@ function PlacedThrowPoint GetPlacedThrowPoint(vector Origin);
 function float GetAdditionalGrenadeThrowDistance(vector Origin);
 function array<Actor> GetDoorModels();
 function SetLockedKnowledge(int Team, int Locked);
+function vector GetDoorWayLocation();
+

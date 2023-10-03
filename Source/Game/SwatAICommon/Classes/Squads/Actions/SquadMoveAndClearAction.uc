@@ -404,7 +404,14 @@ function NotifyGrenadeReadyToThrow()
 // notification that a the client has been registered on the projectile
 function NotifyRegisteredOnProjectile(SwatGrenadeProjectile Grenade)
 {
+	// EPIC HACK move grenades to the center of a doorway when spawned
+	// otherwise AI just throws them into a wall they're leaning on
+	log(self$"::NotifyRegisteredOnProjectile");
 	Projectile = Grenade;
+	if(Level.NetMode != NM_StandAlone && Level.NetMode != NM_Client)
+	{
+		Projectile.SetLocation(ISwatDoor(TargetDoor).GetDoorWayLocation());
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
