@@ -8,10 +8,11 @@ MissionResults.ini
 UnrealEd.ini
 DynamicLoadout.ini
 Swat4.ini
-Inc/
 Packages.*
 *.u
-*.h
 *.log
 *.7z
 *.doc
+*.inl
+*.bak
+*.h

@@ -408,7 +408,7 @@ function NotifyRegisteredOnProjectile(SwatGrenadeProjectile Grenade)
 	// otherwise AI just throws them into a wall they're leaning on
 	log(self$"::NotifyRegisteredOnProjectile");
 	Projectile = Grenade;
-	if(Level.NetMode != NM_StandAlone && Level.NetMode != NM_Client)
+	if(Thrower.Level.NetMode != NM_StandAlone && Thrower.Level.NetMode != NM_Client)
 	{
 		Projectile.SetLocation(ISwatDoor(TargetDoor).GetDoorWayLocation());
 	}

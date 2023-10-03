@@ -277,7 +277,7 @@ private function OnOfficerButtonClick(GuiComponent Sender)
 		case MyPreviousOfficerButton:
 			if( ActiveLoadOutOwner == LoadOutOwner_Player )
 				ActiveLoadOutOwner = LoadOutOwner_BlueTwo;
-			else ActiveLoadOutOwner = LoadOutOwner(ActiveLoadOutOwner - 1);
+			else ActiveLoadOutOwner = LoadOutOwner(ActiveLoadOutOwner - 1);	// just comment them out, compile, uncomment and compile again
 	}
 	
 	MyLoadoutLabel.SetCaption( "Current loadout: "$GetHumanReadableLoadout(GetConfigName(ActiveLoadOutOwner)) );
