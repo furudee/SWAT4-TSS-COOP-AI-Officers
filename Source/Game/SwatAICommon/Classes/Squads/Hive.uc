@@ -676,8 +676,12 @@ private function ClearCommandGoalsForOfficer(Pawn Officer)
 	if (Officer.logTyrion)
 		log("ClearCommandGoalsForOfficer ("$Officer.Name$") - Element is executing command: " $ SwatAIRepo.GetElementSquad().IsExecutingCommandGoal());
 
-	SwatAIRepo.Level.GetLocalPlayerController().ClearHeldCommand(SwatAIRepo.GetElementSquad());
-	SwatAIRepo.Level.GetLocalPlayerController().ClearHeldCommandCaptions(SwatAIRepo.GetElementSquad());
+	if(Officer.Level.GetLocalPlayerController() != None)
+	{
+		SwatAIRepo.Level.GetLocalPlayerController().ClearHeldCommand(SwatAIRepo.GetElementSquad());
+		SwatAIRepo.Level.GetLocalPlayerController().ClearHeldCommandCaptions(SwatAIRepo.GetElementSquad());
+	}
+
 	SwatAIRepo.GetElementSquad().ClearHeldFlag();
 
 	if (SwatAIRepo.GetElementSquad().IsExecutingCommandGoal())

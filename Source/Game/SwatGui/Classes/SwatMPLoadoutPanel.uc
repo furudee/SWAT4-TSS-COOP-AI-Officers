@@ -132,6 +132,7 @@ function ChangeLoadOut( Pocket thePocket )
 	log("[dkaplan] changing loadout for pocket "$GetEnum(Pocket,thePocket) );
     Super.ChangeLoadOut( thePocket );
 
+	/*
 	if(ActiveLoadOutOwner == LoadOutOwner_Player)
 	{
 		switch (thePocket)
@@ -158,6 +159,7 @@ function ChangeLoadOut( Pocket thePocket )
 				break;
 		}
 	}
+	*/
 }
 
 function bool CheckValidity( eNetworkValidity type )
@@ -307,12 +309,10 @@ private function SetSpawnAndEntryButton()
 	}
 	else
 	{
-		//Loadout = PlayerOwner().Spawn( class'DynamicLoadOutSpec', None, name( GetConfigName(ActiveLoadOutOwner) ) );
 		MySpawnButton.SetChecked( MyCurrentLoadOut.bSpawn );
 		MyEntrypointBox.SetIndex( MyCurrentLoadOut.Entrypoint );
 		MySpawnButton.EnableComponent();
 		MyEntrypointBox.EnableComponent();
-		//Loadout.Destroy();
 	}
 }
 
@@ -328,6 +328,10 @@ private function OnSaveLoadoutButtonClick(GuiComponent Sender)
 	if(ActiveLoadOutOwner != LoadOutOwner_Player)
 	{
 		SwatGamePlayerController(PlayerOwner()).SetAIOfficerLoadout( GetConfigName(ActiveLoadOutOwner) );
+	}
+	else
+	{
+		SwatGUIController(Controller).SetMPLoadOut( MyCurrentLoadOut );
 	}
 }
 
