@@ -550,14 +550,14 @@ function NotifyOfficerShotByPlayer(Pawn OfficerShot, float Damage, Pawn PlayerIn
 {
 	assert(PlayerInstigator != None);
 	assert(OfficerShot != None);
-
+	log(self$"::NotifyOfficerShotByPlayer");
 	// only attack this pawn if we don't have a player enemy
 	if (Blackboard.PlayerEnemy != PlayerInstigator)
 	{
 		// make sure we only add up to 100 points of damage for each shot
 		CurrentPlayerDamage += FMin(Damage, 100.f);
 
-		if (OfficerShot.logAI)
+		//if (OfficerShot.logAI)
 			log("CurrentPlayerDamage is: " $ CurrentPlayerDamage $ " PlayerDamageThreshold: " $ PlayerDamageThreshold);
 
 		if (HasTurnedOnPlayer())
@@ -596,6 +596,7 @@ private function PlayerCrossedDamageThreshold(Pawn Player)
 	local int i;
 
 	Blackboard.PlayerEnemy = Player;
+	CurrentPlayerDamage = 0;
 
 	Element = SwatAIRepo.GetElementSquad();
 	
@@ -607,6 +608,10 @@ private function PlayerCrossedDamageThreshold(Pawn Player)
 
 	// trigger appropriate speech to attack the officer
 	Element.TriggerReactedThirdShotSpeech(Player);
+	
+	bTriggeredFirstShotReaction = false;
+	bTriggeredSecondShotReaction = false;
+	bTriggeredThirdShotReaction = false;
 
 	// update the officer assignments so that we go after the player right away
 	UpdateOfficerAssignments();

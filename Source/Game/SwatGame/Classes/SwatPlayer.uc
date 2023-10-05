@@ -137,7 +137,6 @@ var private CommandArrow    CommandArrow;
 var EquipmentUsedOnOther CachedQualifyEquipment;
 var Actor CachedQualifyTarget;
 
-
 replication
 {
 	// replicated functions sent to server by owning client
@@ -3698,6 +3697,18 @@ simulated function OnEffectStopped(Actor inStoppedEffect, bool Completed)
 }
 
 simulated function OnEffectInitialized(Actor inInitializedEffect);
+
+function PostTakeDamage( int Damage, Pawn instigatedBy, Vector hitlocation, 
+						Vector momentum, class<DamageType> damageType)
+{
+	log(self$"::PostTakeDamage");
+	if( Level.IsPlayingCOOP && instigatedBy.IsA('SwatPlayer') && !IsIncapacitated())
+	{
+		SwatGamePlayerController(Controller).NotifyHiveOfFriendlyFire(self, Damage * 2 , instigatedBy);
+	}
+	
+	Super.PostTakeDamage(Damage, instigatedBy, hitlocation, momentum, damageType);
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////

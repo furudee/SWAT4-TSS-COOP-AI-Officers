@@ -54,7 +54,7 @@ defaultproperties
 	bAcceptsProjectors=false
 	bStaticLighting=false
 	bShadowCast=false
-
+	bAlwaysRelevant=true
 	bHidden=true
     DrawType=DT_StaticMesh
     StaticMesh=StaticMesh'Doors_sm.MirrorPoint'

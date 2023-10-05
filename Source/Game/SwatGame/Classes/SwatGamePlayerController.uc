@@ -313,7 +313,8 @@ replication
 		
 	reliable if(Role < ROLE_Authority)
 		ServerOrderOfficers, ServerGetAIOfficerLoadout, ServerSetAIOfficerPocket, ServerSetAIOfficerMaterial,
-		ServerSetAIOfficerSkin, ServerSetAIOfficerEditor, ServerNotifyUpdatedLoadout, ServerSetAIOfficerSpawn, ServerSetAIOfficerEntrypoint;
+		ServerSetAIOfficerSkin, ServerSetAIOfficerEditor, ServerNotifyUpdatedLoadout, ServerSetAIOfficerSpawn, 
+		ServerSetAIOfficerEntrypoint;
 	reliable if (Role == ROLE_Authority)
 		ClientSetAIOfficerPocket, ClientSetAIOfficerMaterial, ClientSetAIOfficerSkin, ClientSetAIOfficerEditor,
 		ClientNotifyUpdatedLoadout, ClientSetAIOfficerSpawn, ClientSetAIOfficerEntrypoint, ClientEquipAIOfficer;
@@ -4908,6 +4909,16 @@ exec function CommandOrEquip(NumberRow Row, int Number)
         EquipSlot(Number);
 }
 
+/////////////////////////////////////////////////////////////////////////////
+
+function NotifyHiveOfFriendlyFire(Pawn PlayerShot, float Damage, Pawn PlayerInstigator)
+{
+	log(self$"::NotifyHiveOfFriendlyFire");
+	log("PlayerShot: "$PlayerShot$" PlayerInstigator: "$PlayerInstigator);
+	SwatAIRepository(Level.AIRepo).GetHive().NotifyOfficerShotByPlayer(PlayerShot, Damage, PlayerInstigator);
+}
+
+/////////////////////////////////////////////////////////////////////////////
 
 simulated function ClientEquipAIOfficer( Pawn Officer, EquipmentSlot Slot )
 {
@@ -4925,7 +4936,6 @@ simulated function ClientEquipAIOfficer( Pawn Officer, EquipmentSlot Slot )
 		}
 	}
 }
-
 
 /////////////////////////////////////////////////////////////////////////////
 // Scuffed implementation to send and save loadouts on clients and servers //
