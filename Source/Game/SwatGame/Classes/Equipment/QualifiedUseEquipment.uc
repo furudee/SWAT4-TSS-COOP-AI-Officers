@@ -75,9 +75,12 @@ simulated latent protected function DoUsingHook()
     //  return;
     //}
 
-    OwnerIsLocalPlayer = (Pawn(Owner) == SwatGamePlayerController(Level.GetLocalPlayerController()).Pawn);
-
-    Progress = SwatGamePlayerController(Level.GetLocalPlayerController()).GetHUDPage().Progress;
+	if(Level.GetLocalPlayerController() != None)
+	{
+		OwnerIsLocalPlayer = (Pawn(Owner) == SwatGamePlayerController(Level.GetLocalPlayerController()).Pawn);
+		Progress = SwatGamePlayerController(Level.GetLocalPlayerController()).GetHUDPage().Progress;
+	}
+	
     UseAlternate = ShouldUseAlternate();    //does subclass want to use alternate using animations?
 
     if (FirstPersonModel != None)

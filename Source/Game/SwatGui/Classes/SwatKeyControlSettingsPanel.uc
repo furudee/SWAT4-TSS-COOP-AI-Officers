@@ -48,7 +48,7 @@ function InitComponent(GUIComponent MyOwner)
     RestrictKeys();
 	
 	// thanks eezstreet for this hack
-	GC.LocalizedCommandString[GC.LocalizedCommandString.Length] = "Change command team (COOP)";
+	//GC.LocalizedCommandString[GC.LocalizedCommandString.Length] = "Change command team (COOP)";
 }
 
 function SaveSettings()

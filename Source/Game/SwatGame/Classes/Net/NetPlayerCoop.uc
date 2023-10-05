@@ -13,10 +13,13 @@ simulated function PostBeginPlay()
 
 simulated function string GetViewportType()
 {
+	/*
 	if (TeamNumber == 0)
 		return "TeamA";
 	else
 		return "TeamB";
+	*/
+	return "TeamA"; 	// return just one value or players on other "team" aka players spawned on another entrypoint can't be viewed
 }
 
 function SetSkins(TeamInfo NewTeam)

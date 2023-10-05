@@ -268,7 +268,6 @@ simulated function NotifyHit(float Damage, Pawn HitInstigator)
 //	log("NotifyHit - Damage: " $ Damage $ " HitInstigator: " $ HitInstigator $ " IsIncapacitated: " $ IsIncapacitated());
     IsHitByPlayer = HitInstigator.IsA( 'SwatPlayer' ) || HitInstigator.IsA( 'SniperPawn' );
 
-	// the following doesn't need to be networked because we have no Officers in Coop
     if ( IsHitByPlayer )
 	    PlayerInstigator = SwatPlayer(HitInstigator);
     
@@ -410,7 +409,7 @@ simulated function Vector  GetViewportLocation()
 	
 	Location = GetViewpoint();
 	if(Level.NetMode == NM_Client)
-		Location.Z = Location.Z + 50;			// getviewpoint gets pawn center so need to adjust on network games
+		Location.Z = Location.Z + 45;			// getviewpoint gets pawn center so need to adjust on network games
     return Location;
 }
 
@@ -755,7 +754,6 @@ simulated function DeployedC2ChargeBase GetDeployedC2Charge()
 latent function ReEquipFiredWeapon()
 {
 	local FiredWeapon PrimaryWeapon, BackupWeapon;
-
 	// only try and re-equip if we're conscious
 	if (IsConscious())
 	{
@@ -937,6 +935,7 @@ simulated function OnActiveItemEquipped()
 	Super.OnActiveItemEquipped();
 	//log(self$"::OnActiveItemEquipped Level.NetMode: "$Level.NetMode);
 	
+	
 	if( Level.NetMode != NM_StandAlone && Level.NetMode != NM_Client )
 	{
 		for(i = Level.ControllerList; i != None; i = i.NextController)
@@ -947,6 +946,7 @@ simulated function OnActiveItemEquipped()
 			}
 		}
 	}
+	
 }
 
 function GetThrownProjectileParams(out vector outLocation, out rotator outRotation)

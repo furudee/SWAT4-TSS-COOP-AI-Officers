@@ -1194,12 +1194,12 @@ simulated function ReceiveCommandMP(
 	{
 		case 'RedTeam':
 			PlayerController.ClientMessage(
-				"[c=cc0000][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
+				"[c=ff5050][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
 				'CommandGiven');
 			break;
         case 'BlueTeam':
 			PlayerController.ClientMessage(
-				"[c=3d85c6][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
+				"[c=0099ff][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
 				'CommandGiven');
 			break;
         default:
@@ -1207,6 +1207,7 @@ simulated function ReceiveCommandMP(
 				"[c=FFC800][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,
 				'CommandGiven');
 	}
+
 	/*
     PlayerController.ClientMessage(
         "[c=FFC800][b]"$SourceActorName $ GaveCommandString $ Commands[CommandIndex].Text,

@@ -434,7 +434,8 @@ private function InternalOnDlgReturned( int Selection, String passback )
 
 protected function AbortGame()
 {
-    SwatGuiController(Controller).PlayerDisconnect(); 
+    SwatGuiController(Controller).PlayerDisconnect();
+	MyMPLoadoutPanel.SetHasReceivedLoadouts(false);		// for unsetting so we can retrieve them again
 }
 
 function ResumeGame()

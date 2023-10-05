@@ -51,14 +51,6 @@ function InitComponent(GUIComponent MyOwner)
 	MySpawnButton.OnClick=OnSpawnButtonClick;
 	MyEntrypointBox.OnChange=OnEntrypointChange;
 	MySaveLoadoutButton.OnClick=OnSaveLoadoutButtonClick;
-	
-	if( !PlayerOwner().Level.IsPlayingCOOP )
-	{
-		MyNextOfficerButton.DisableComponent();
-		MyPreviousOfficerButton.DisableComponent();
-		MySpawnButton.DisableComponent();
-		MyEntrypointBox.DisableComponent();
-	}
 }
 
 function LoadMultiPlayerLoadout()
@@ -89,8 +81,8 @@ protected function SpawnLoadouts()
     ActiveLoadOutOwner = LoadOutOwner_Player;
     MyCurrentLoadOut = MyCurrentLoadOuts[ ActiveLoadOutOwner ];
 	MyLoadoutLabel.SetCaption( "Current loadout: "$GetHumanReadableLoadout(GetConfigName(ActiveLoadOutOwner)) );
-	SetSpawnAndEntryButton();
-	bHasReceivedLoadouts = true;
+	SetButtons();
+	SetHasReceivedLoadouts(true);
 }
 
 protected function DestroyLoadouts() 
@@ -109,6 +101,11 @@ protected function DestroyLoadouts()
     if( MyCurrentLoadOut != None )
         MyCurrentLoadOut.destroy();
     MyCurrentLoadOut = None;
+}
+
+function SetHasReceivedLoadouts(bool bReceived)
+{
+	bHasReceivedLoadouts = bReceived;
 }
 
 ///////////////////////////
@@ -257,7 +254,7 @@ function CheckUpdatedLoadout( String updatedLoadout )
 			if(currentLoadout == updatedLoadout)
 			{
 				MyCurrentLoadOut = MyCurrentLoadOuts[i];
-				SetSpawnAndEntryButton();
+				SetButtons();
 			}
 			InitialDisplay();
 			break;
@@ -282,7 +279,7 @@ private function OnOfficerButtonClick(GuiComponent Sender)
 	
 	MyLoadoutLabel.SetCaption( "Current loadout: "$GetHumanReadableLoadout(GetConfigName(ActiveLoadOutOwner)) );
 	LoadLoadOut( GetConfigName(ActiveLoadOutOwner), false );
-	SetSpawnAndEntryButton();
+	SetButtons();
 	InitialDisplay();
 	log(self$"::OnOfficerButtonClick | ActiveLoadOutOwner: "$ActiveLoadOutOwner);
 }
@@ -297,7 +294,7 @@ private function OnEntrypointChange(GuiComponent Sender)
 	MyCurrentLoadOut.Entrypoint = EEntryType( MyEntrypointBox.GetIndex() );
 }
 
-private function SetSpawnAndEntryButton()
+private function SetButtons()
 {
 	local DynamicLoadOutSpec Loadout;
 	
@@ -313,6 +310,14 @@ private function SetSpawnAndEntryButton()
 		MyEntrypointBox.SetIndex( MyCurrentLoadOut.Entrypoint );
 		MySpawnButton.EnableComponent();
 		MyEntrypointBox.EnableComponent();
+	}
+	
+	if( !PlayerOwner().Level.IsPlayingCOOP )
+	{
+		MyNextOfficerButton.DisableComponent();
+		MyPreviousOfficerButton.DisableComponent();
+		MySpawnButton.DisableComponent();
+		MyEntrypointBox.DisableComponent();
 	}
 }
 

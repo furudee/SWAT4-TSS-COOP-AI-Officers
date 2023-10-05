@@ -60,7 +60,7 @@ simulated function UsedHook()
 //Cuffs become unavailable even in Training
 simulated function UpdateAvailability()
 {
-    if (UnavailableAfterUsed)
+    if (UnavailableAfterUsed && Level.NetMode == NM_Standalone)
         SetAvailable(false);
 }
 
