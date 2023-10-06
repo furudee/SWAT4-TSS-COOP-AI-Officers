@@ -1,12 +1,9 @@
 Swat4X.ini
 Swat4XDedicatedServer.ini
-User.ini
 Running.ini
 Campaign.ini
 MissionResults.ini
 UnrealEd.ini
-DynamicLoadout.ini
-Swat4.ini
 Packages.*
 *.u
 *.log

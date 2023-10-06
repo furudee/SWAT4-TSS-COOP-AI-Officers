@@ -307,3 +307,10 @@ function OnPlayerDied( PlayerController player, Controller killer )
 	if (SwatPlayerReplicationInfo(player.PlayerReplicationInfo).IsLeader)
 		SelectLeader(NetTeam(player.PlayerReplicationInfo.Team));
 }
+
+function SwatMPStartCluster GetMPStartCluster(int index)
+{
+	return CurrentStartCluster[index];
+}
+
+

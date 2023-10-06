@@ -161,7 +161,6 @@ function AssignPlayerRoles()
     }
 }
 
-
 /////////////////////////////////////////////////////////////////////////////
 // Select initial spawn clusters
 /////////////////////////////////////////////////////////////////////////////
@@ -392,7 +391,7 @@ function SwatMPStartPoint FindNetPlayerStart( Controller Player )
     }
 }
 
-private function bool SpawnPointCanBeUsed( Actor thePoint )
+function bool SpawnPointCanBeUsed( Actor thePoint )
 {
     local int j;
 

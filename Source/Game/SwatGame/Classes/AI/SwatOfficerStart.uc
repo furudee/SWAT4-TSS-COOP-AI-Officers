@@ -34,7 +34,7 @@ cpptext
 
 ///////////////////////////////////////////////////////////////////////////////
 
-private function class<SwatOfficer> GetOfficerClass()
+function class<SwatOfficer> GetOfficerClass()
 {
 	switch (OfficerStartType)
 	{

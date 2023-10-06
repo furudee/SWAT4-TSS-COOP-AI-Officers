@@ -1713,83 +1713,77 @@ function InitVoiceReplicationInfo()
 		VoiceReplicationInfo.DefaultChannel = i;
 }
 
-private function bool ShouldSpawnOfficerRedOne(EEntryType EntryType)  
+private function bool ShouldSpawnOfficerRedOne()  
 {
-	local DynamicLoadOutSpec Loadout;
-	local bool willSpawn;
-	
 	if(Level.NetMode == NM_StandAlone)
 		return Repo.GuiConfig.CurrentMission.CustomScenario == None || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerRedOne;
-	
-	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayerOfficerRedOneLoadOut" ) );
-	willSpawn = Loadout.bSpawn && Loadout.Entrypoint == EntryType;
-	Loadout.Destroy();
-	return willSpawn;
 }
 
-private function bool ShouldSpawnOfficerRedTwo(EEntryType EntryType)  
+private function bool ShouldSpawnOfficerRedTwo()  
 { 
-	local DynamicLoadOutSpec Loadout;
-	local bool willSpawn;
-	
 	if(Level.NetMode == NM_StandAlone)
 		return Repo.GuiConfig.CurrentMission.CustomScenario == None || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerRedTwo;
-	
-	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayerOfficerRedTwoLoadOut" ) );
-	willSpawn = Loadout.bSpawn && Loadout.Entrypoint == EntryType;
-	Loadout.Destroy();
-	return willSpawn;
 }
 
-private function bool ShouldSpawnOfficerBlueOne(EEntryType EntryType) 
+private function bool ShouldSpawnOfficerBlueOne() 
 { 
-	local DynamicLoadOutSpec Loadout;
-	local bool willSpawn;
-	
 	if(Level.NetMode == NM_StandAlone)
 		return Repo.GuiConfig.CurrentMission.CustomScenario == None || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerBlueOne;
-	
-	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayerOfficerBlueOneLoadOut" ) );
-	willSpawn = Loadout.bSpawn && Loadout.Entrypoint == EntryType;
-	Loadout.Destroy();
-	return willSpawn;
 }
 
-private function bool ShouldSpawnOfficerBlueTwo(EEntryType EntryType) 
+private function bool ShouldSpawnOfficerBlueTwo() 
 {
-	local DynamicLoadOutSpec Loadout;
-	local bool willSpawn;
-	
 	if(Level.NetMode == NM_StandAlone)
 		return Repo.GuiConfig.CurrentMission.CustomScenario == None || Repo.GuiConfig.CurrentMission.CustomScenario.HasOfficerBlueTwo;
-	
-	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayerOfficerBlueTwoLoadOut" ) );
-	willSpawn = Loadout.bSpawn && Loadout.Entrypoint == EntryType;
-	Loadout.Destroy();
-	return willSpawn;
 }
 
 private function bool ShouldSpawnOfficerAtStart(SwatOfficerStart OfficerStart, EEntryType DesiredEntryType)
 {
 	assert(OfficerStart != None);
 
-	if (OfficerStart.EntryType == DesiredEntryType || Level.IsCOOPServer )
+	if (OfficerStart.EntryType == DesiredEntryType)
 	{
 		switch (OfficerStart.OfficerStartType)
 		{
 			case RedOneStart:
-				return ShouldSpawnOfficerRedOne( OfficerStart.EntryType );
+				return ShouldSpawnOfficerRedOne();
 			case RedTwoStart:
-				return ShouldSpawnOfficerRedTwo( OfficerStart.EntryType );
+				return ShouldSpawnOfficerRedTwo();
 			case BlueOneStart:
-				return ShouldSpawnOfficerBlueOne( OfficerStart.EntryType );
+				return ShouldSpawnOfficerBlueOne();
 			case BlueTwoStart:
-				return ShouldSpawnOfficerBlueTwo( OfficerStart.EntryType );
+				return ShouldSpawnOfficerBlueTwo();
 		}
 	}
-
 	return false;
 }
+
+// this function exists because some maps have officer spawnpoints overlapping mp ones, 
+// so officers fail encroaching check and are destroyed
+private function SpawnOfficerMP(SwatOfficerStart OfficerStart)
+{
+	local SwatMPStartCluster Cluster;
+	local SwatMPStartPoint MPStartPoint;
+	local DynamicLoadOutSpec Loadout;
+	local int i;
+	
+	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayer"$OfficerStart.GetOfficerClass().name$"LoadOut" ) );
+	if(Loadout.bSpawn && ( OfficerStart.EntryType == Loadout.Entrypoint || !(Repo.GuiConfig.CurrentMission.EntryOptionTitle.Length >= 2) ))
+	{
+		Cluster = GameModeCOOP(GameMode).GetMPStartCluster(OfficerStart.EntryType);
+		for(i = 0; i < Cluster.NumberOfStartPoints; i++)
+		{
+			MPStartPoint = Cluster.StartPoints[i];
+			if(GameModeCOOP(GameMode).SpawnPointCanBeUsed(MPStartPoint))
+			{
+				Spawn(OfficerStart.GetOfficerClass(), , , MPStartPoint.Location, MPStartPoint.Rotation);
+				break;
+			}
+		}
+	}
+	Loadout.Destroy();
+}
+
 
 // Goes through all of the SwatOfficerStart points and tells it to spawn the officer
 private function SpawnOfficers()
@@ -1814,8 +1808,13 @@ private function SpawnOfficers()
 		{
 			if(Iter.IsA('SwatOfficerStart'))
             {
-                OfficerStart = SwatOfficerStart(Iter);
-				if (ShouldSpawnOfficerAtStart(OfficerStart, DesiredEntryType))
+                OfficerStart = SwatOfficerStart(Iter);			
+				if(Level.NetMode != NM_StandAlone)
+				{
+					SpawnOfficerMP(OfficerStart);
+					++NumSpawnedOfficers;
+				}
+				else if (ShouldSpawnOfficerAtStart(OfficerStart, DesiredEntryType))
 				{
 		            log("  Will *Spawn* officer at "$OfficerStart$" with entry type "$GetEnum(EEntryType,DesiredEntryType));
 			        OfficerSpawnPoints[OfficerStart.OfficerStartType] = OfficerStart;
