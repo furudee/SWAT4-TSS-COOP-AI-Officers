@@ -1770,15 +1770,26 @@ private function SpawnOfficerMP(SwatOfficerStart OfficerStart)
 	Loadout = Spawn( class'DynamicLoadOutSpec', None, name( "CurrentMultiplayer"$OfficerStart.GetOfficerClass().name$"LoadOut" ) );
 	if(Loadout.bSpawn && ( OfficerStart.EntryType == Loadout.Entrypoint || !(Repo.GuiConfig.CurrentMission.EntryOptionTitle.Length >= 2) ))
 	{
-		Cluster = GameModeCOOP(GameMode).GetMPStartCluster(OfficerStart.EntryType);
-		for(i = 0; i < Cluster.NumberOfStartPoints; i++)
+		// failed encroaching check
+		if( !GameModeCOOP(GameMode).SpawnPointCanBeUsed(OfficerStart) )
 		{
-			MPStartPoint = Cluster.StartPoints[i];
-			if(GameModeCOOP(GameMode).SpawnPointCanBeUsed(MPStartPoint))
+			// use MP spawnpoint
+			Cluster = GameModeCOOP(GameMode).GetMPStartCluster(OfficerStart.EntryType);
+			for(i = 0; i < Cluster.NumberOfStartPoints; i++)
 			{
-				Spawn(OfficerStart.GetOfficerClass(), , , MPStartPoint.Location, MPStartPoint.Rotation);
-				break;
+				MPStartPoint = Cluster.StartPoints[i];
+				if(GameModeCOOP(GameMode).SpawnPointCanBeUsed(MPStartPoint))
+				{
+					Spawn(OfficerStart.GetOfficerClass(), , , MPStartPoint.Location, MPStartPoint.Rotation);
+					++NumSpawnedOfficers;
+					break;
+				}
 			}
+		}
+		else
+		{
+			Spawn(OfficerStart.GetOfficerClass(), , , OfficerStart.Location, OfficerStart.Rotation);
+			++NumSpawnedOfficers;
 		}
 	}
 	Loadout.Destroy();
@@ -1812,7 +1823,6 @@ private function SpawnOfficers()
 				if(Level.NetMode != NM_StandAlone)
 				{
 					SpawnOfficerMP(OfficerStart);
-					++NumSpawnedOfficers;
 				}
 				else if (ShouldSpawnOfficerAtStart(OfficerStart, DesiredEntryType))
 				{
